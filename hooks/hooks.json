@@ -11,6 +11,30 @@
           }
         ]
       }
+    ],
+    "TaskStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python scripts/lesson-tracker.py inject",
+            "async": false
+          }
+        ]
+      }
+    ],
+    "TaskComplete": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python scripts/lesson-tracker.py parse \"{{task_context}}\"",
+            "async": false
+          }
+        ]
+      }
     ]
   }
 }
