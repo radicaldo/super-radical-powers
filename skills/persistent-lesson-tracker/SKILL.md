@@ -44,6 +44,49 @@ Lessons are structured, not free text:
 
 The `summary` is what gets injected; the rest is provenance. `times_seen` increments on each re-discovery and serves as a confidence score — high-confidence lessons rank first when there are more lessons than the inject cap (12).
 
+## Two-tier learning: candidates and promoted lessons
+
+A new failure-then-success pair does **not** immediately become an injected lesson. It lands first in `candidate_lessons` and only promotes to `learned_lessons` (the array that gets injected into agents) after it has been observed `PROMOTION_THRESHOLD` times — currently 3. This filters out one-off coincidences, ad-hoc agent probes, and misread workflow patterns.
+
+What this looks like in practice:
+
+- **Sighting 1**: lesson written to `candidate_lessons`. Visible in the file, not injected. Stderr shows `candidate-new`.
+- **Sighting 2** (same pattern, possibly different session): `times_seen` bumps to 2. Stderr shows `candidate-bumped`. Still not injected.
+- **Sighting 3**: pattern moves from `candidate_lessons` to `learned_lessons` and becomes eligible for injection. Stderr shows `promoted`.
+- **Subsequent sightings**: bumps `times_seen` on the promoted lesson. Stderr shows `promoted-bumped`.
+
+Real environment quirks (Windows `python` → `py`, project-specific pytest flags, recurring tooling gotchas) repeat across sessions and promote naturally. Spurious patterns (TDD red-green pairs, ad-hoc one-off retries, coincidences) sit in candidates and never reach injection.
+
+You can review the candidate pile to audit what the system *almost* learned: a candidate pile full of TDD coincidences signals that a skill needs marker conventions added; a pile of legit-looking patterns just needs more session data to corroborate.
+
+## Skill-side cooperation: intent markers
+
+The hook can't tell intent from a tool result alone — a TDD `[red]` test failing looks identical to a real bug. So skills that drive *deliberately* failing tool calls cooperate with the hook by prefixing the bash `description` field with an explicit marker:
+
+| Marker | When to use |
+|---|---|
+| `[red]` | TDD red phase — test should fail because feature is missing |
+| `[green]` | TDD green phase — paired with the prior `[red]` |
+| `[probe]` | Exploratory check (does this file/binary/service exist?) |
+| `[verify]` | Verifying a known state, not attempting a real operation |
+| `[reproduce]` | Deliberately reproducing a bug for systematic debugging |
+| `[expected-fail]` | Catch-all for any other intentional non-zero outcome |
+
+When a marker is present, the hook still records the call in its buffer (for debugging visibility) but flags it as `intentional: true` so the matcher will never pair it with a subsequent success. This is a deterministic skip, not a heuristic guess.
+
+**Skills currently using markers:**
+
+- `test-driven-development` → `[red]` and `[green]` on Verify RED / Verify GREEN steps
+
+**Skills that should be updated incrementally as false-positive data accumulates:**
+
+- `systematic-debugging` → `[reproduce]` on Phase 1 reproduction commands
+- `executing-plans` → `[verify]` on `verifyCommand` runs (depending on phase)
+- `finishing-a-development-branch` → `[verify]` on final test runs
+- `using-git-worktrees` → `[probe]` on `git worktree list` checks
+
+Until those updates land, the promotion-threshold filter (described above) catches the residual noise.
+
 ## Storage
 
 `.claude/lessons.json`, scoped to the project directory. Different projects accumulate different lesson sets — your Docker-heavy backend doesn't poison context for a pure Python data-science project.

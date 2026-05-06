@@ -59,7 +59,26 @@ BUFFER_MAX_AGE_SECONDS = 600
 
 # Storage caps.
 MAX_LESSONS_TOTAL = 40
+MAX_CANDIDATES_TOTAL = 60
 MAX_LESSONS_INJECTED = 12
+
+# Promotion threshold: a lesson stays in candidate_lessons until it has
+# been observed this many times across (potentially) different sessions.
+# Real environment quirks repeat. TDD red-green coincidences don't.
+PROMOTION_THRESHOLD = 3
+
+# Markers that explicitly tell us a tool call's outcome should NOT be
+# treated as a real failure-then-success pair. Skills that drive
+# intentional failures (TDD red, debug repros, existence probes) prefix
+# their bash `description` field with one of these. Case-insensitive.
+INTENT_SKIP_MARKERS = (
+    "[red]",          # TDD red phase - test should fail
+    "[green]",        # TDD green phase - paired with [red]
+    "[probe]",        # Exploratory check (does X exist?)
+    "[verify]",       # Verifying a known state
+    "[reproduce]",    # Deliberately reproducing a bug
+    "[expected-fail]",  # Generic catch-all
+)
 
 SCHEMA_VERSION = 2
 
@@ -114,6 +133,7 @@ def _default_lessons_doc() -> Dict[str, Any]:
         "last_updated": datetime.now().isoformat(),
         "global_constraints": [],
         "learned_lessons": [],
+        "candidate_lessons": [],
     }
 
 
@@ -146,6 +166,10 @@ def load_lessons() -> Dict[str, Any]:
         return _default_lessons_doc()
     if doc.get("version") != SCHEMA_VERSION:
         doc = _migrate_v1(doc)
+    # Backfill new fields on docs written by an older v2 build.
+    doc.setdefault("candidate_lessons", [])
+    doc.setdefault("learned_lessons", [])
+    doc.setdefault("global_constraints", [])
     return doc
 
 
@@ -159,12 +183,29 @@ def save_lessons(doc: Dict[str, Any]) -> None:
             reverse=True,
         )
         doc["learned_lessons"] = doc["learned_lessons"][:MAX_LESSONS_TOTAL]
+    if len(doc.get("candidate_lessons", [])) > MAX_CANDIDATES_TOTAL:
+        # Candidates rotate FIFO - if it didn't corroborate fast, drop it.
+        doc["candidate_lessons"] = doc["candidate_lessons"][-MAX_CANDIDATES_TOTAL:]
     LESSONS_FILE.write_text(json.dumps(doc, indent=2), encoding="utf-8")
 
 
 def _make_lesson_id(failed: str, worked: str) -> str:
     h = hashlib.sha1(f"{failed}||{worked}".encode("utf-8", errors="replace"))
     return h.hexdigest()[:10]
+
+
+def _has_skip_marker(tool_input: Dict[str, Any]) -> bool:
+    """
+    True if this tool call's description carries an explicit intent
+    marker telling us not to treat its outcome as a real failure.
+    """
+    if not isinstance(tool_input, dict):
+        return False
+    desc = tool_input.get("description", "")
+    if not isinstance(desc, str):
+        return False
+    low = desc.lower().strip()
+    return any(low.startswith(m) for m in INTENT_SKIP_MARKERS)
 
 
 # ---------- buffer (recent tool calls) ----------
@@ -343,10 +384,14 @@ def find_matching_failure(
         for entry in reversed(buffer):
             if entry.get("tool") != tool_name or not entry.get("failed"):
                 continue
+            if entry.get("intentional"):
+                continue
             if _check(entry.get("sigs") or entry.get("sig"), body_sigs):
                 return entry
     for entry in reversed(buffer):
         if entry.get("tool") != tool_name or not entry.get("failed"):
+            continue
+        if entry.get("intentional"):
             continue
         if _check(entry.get("sigs") or entry.get("sig"), other_sigs):
             return entry
@@ -400,15 +445,44 @@ def _first_line(s: str) -> str:
     return s.strip().splitlines()[0][:120]
 
 
-def add_or_update_lesson(doc: Dict[str, Any], lesson: Dict[str, Any]) -> bool:
-    """Returns True if added (or seen-count bumped), False otherwise."""
+def add_or_update_lesson(doc: Dict[str, Any], lesson: Dict[str, Any]) -> str:
+    """
+    Add or update a lesson, applying the promotion-threshold workflow:
+
+      - First sighting: lands in candidate_lessons (not injected).
+      - Each subsequent sighting: bumps times_seen on the candidate.
+      - When times_seen >= PROMOTION_THRESHOLD: promoted to
+        learned_lessons (becomes eligible for injection).
+      - If the same lesson is already promoted: just bump times_seen.
+
+    Returns one of: "promoted", "candidate-bumped", "candidate-new",
+    "promoted-bumped" - useful for the caller's stderr log.
+    """
+    lesson_id = lesson["id"]
+
+    # Already promoted? Just bump.
     for existing in doc.setdefault("learned_lessons", []):
-        if existing.get("id") == lesson["id"]:
+        if existing.get("id") == lesson_id:
             existing["times_seen"] = existing.get("times_seen", 1) + 1
             existing["last_seen"] = lesson["last_seen"]
-            return True
-    doc["learned_lessons"].append(lesson)
-    return True
+            return "promoted-bumped"
+
+    # Existing candidate? Bump and check for promotion.
+    candidates = doc.setdefault("candidate_lessons", [])
+    for cand in candidates:
+        if cand.get("id") == lesson_id:
+            cand["times_seen"] = cand.get("times_seen", 1) + 1
+            cand["last_seen"] = lesson["last_seen"]
+            if cand["times_seen"] >= PROMOTION_THRESHOLD:
+                # Promote - move from candidates to learned.
+                candidates.remove(cand)
+                doc["learned_lessons"].append(cand)
+                return "promoted"
+            return "candidate-bumped"
+
+    # Brand new pattern - lands in candidates only.
+    candidates.append(lesson)
+    return "candidate-new"
 
 
 # ---------- inject formatting ----------
@@ -482,20 +556,37 @@ def scan_transcript_for_retries(path: str) -> List[Dict[str, Any]]:
                     sigs = _input_signatures(tool, inp)
                     if not sigs:
                         continue
+                    intentional = _has_skip_marker(inp)
                     if failed:
-                        recent_failures.append({
-                            "tool": tool, "sigs": sigs, "input": inp,
-                            "error": err,
-                        })
+                        if intentional:
+                            # Record but flag - never matchable. We keep
+                            # it in the local list so the next-up search
+                            # won't accidentally walk past it to an
+                            # older real failure.
+                            recent_failures.append({
+                                "tool": tool, "sigs": sigs, "input": inp,
+                                "error": err, "intentional": True,
+                            })
+                        else:
+                            recent_failures.append({
+                                "tool": tool, "sigs": sigs, "input": inp,
+                                "error": err, "intentional": False,
+                            })
                         if len(recent_failures) > BUFFER_MAX_ENTRIES:
                             recent_failures = recent_failures[-BUFFER_MAX_ENTRIES:]
                     else:
+                        if intentional:
+                            # A success marked [green] etc. is the paired
+                            # half of an intentional failure - skip.
+                            continue
                         # Success: prefer body-sig match over first-token.
                         body_sigs = {s for s in sigs if s.startswith("bash:body:")}
                         other_sigs = set(sigs) - body_sigs
                         match = None
                         for f_entry in reversed(recent_failures):
                             if f_entry["tool"] != tool:
+                                continue
+                            if f_entry.get("intentional"):
                                 continue
                             f_sigs = set(f_entry["sigs"])
                             if body_sigs and (body_sigs & f_sigs):
@@ -504,6 +595,8 @@ def scan_transcript_for_retries(path: str) -> List[Dict[str, Any]]:
                         if match is None:
                             for f_entry in reversed(recent_failures):
                                 if f_entry["tool"] != tool:
+                                    continue
+                                if f_entry.get("intentional"):
                                     continue
                                 f_sigs = set(f_entry["sigs"])
                                 if other_sigs & f_sigs:
@@ -641,6 +734,12 @@ def cmd_capture() -> int:
     if not sigs:
         return 0
 
+    # Skill-side intent declaration: if the description starts with a
+    # known marker (e.g., [red] for TDD), the failure is intentional and
+    # must not be paired with a subsequent success. We still record it
+    # in the buffer (debugging visibility) but flag it as intentional.
+    intentional = _has_skip_marker(tool_input)
+
     buffer = load_buffer()
     entry = {
         "ts": time.time(),
@@ -648,10 +747,11 @@ def cmd_capture() -> int:
         "sigs": sigs,
         "input": tool_input,
         "failed": failed,
+        "intentional": intentional,
         "error": err if failed else "",
     }
 
-    if not failed:
+    if not failed and not intentional:
         match = find_matching_failure(tool_name, tool_input, buffer)
         if match is not None:
             doc = load_lessons()
@@ -660,12 +760,13 @@ def cmd_capture() -> int:
                 match.get("error", ""),
                 source="auto-postuse",
             )
-            add_or_update_lesson(doc, lesson)
+            outcome = add_or_update_lesson(doc, lesson)
             save_lessons(doc)
-            # Drop the matched failure so we don't re-pair it.
             match_ts = match.get("ts")
             buffer = [b for b in buffer if b.get("ts") != match_ts]
-            sys.stderr.write(f"[lesson-tracker] learned: {lesson['summary'][:120]}\n")
+            sys.stderr.write(
+                f"[lesson-tracker] {outcome}: {lesson['summary'][:120]}\n"
+            )
 
     buffer.append(entry)
     save_buffer(buffer)
@@ -684,14 +785,17 @@ def cmd_scan_subagent() -> int:
     if not new_lessons:
         return 0
     doc = load_lessons()
-    added = 0
+    promoted = 0
+    candidate = 0
     for nl in new_lessons:
-        if add_or_update_lesson(doc, nl):
-            added += 1
-    if added:
-        save_lessons(doc)
+        outcome = add_or_update_lesson(doc, nl)
+        if outcome.startswith("promoted"):
+            promoted += 1
+        else:
+            candidate += 1
+    save_lessons(doc)
     sys.stderr.write(
-        f"[lesson-tracker] subagent scan: {added} lesson(s) merged\n"
+        f"[lesson-tracker] subagent scan: {promoted} promoted, {candidate} candidate\n"
     )
     return 0
 

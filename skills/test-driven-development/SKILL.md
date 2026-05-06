@@ -118,6 +118,8 @@ Vague name, tests mock not code
 npm test path/to/test.test.ts
 ```
 
+**Tool-call hygiene:** When invoking the bash tool to run this verification, prefix the `description` field with `[red]`. Example: `[red] Verify test fails because feature missing`. This signals to the persistent-lesson-tracker hook that the failure is intentional (TDD red phase) and must not be paired with a subsequent success as a "lesson learned."
+
 Confirm:
 - Test fails (not errors)
 - Failure message is expected
@@ -172,6 +174,8 @@ Don't add features, refactor other code, or "improve" beyond the test.
 ```bash
 npm test path/to/test.test.ts
 ```
+
+**Tool-call hygiene:** Prefix the bash `description` field with `[green]`. Example: `[green] Verify test now passes after implementation`. This pairs with the prior `[red]` invocation and tells the lesson-tracker hook to skip the natural failure-then-success pattern that TDD always creates.
 
 Confirm:
 - Test passes
