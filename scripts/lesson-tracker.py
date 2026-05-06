@@ -289,6 +289,70 @@ def _bash_first_token(cmd: str) -> str:
     return ""
 
 
+# Wrapper commands stripped from the start of bash commands before we
+# compute signatures. They're navigation/setup context, not the actual
+# command being learned about. Only the most common cases - keep narrow.
+_AMP_WRAPPERS = ("cd", "pushd")              # need '&& real_command' after
+_SIMPLE_WRAPPERS = ("sudo", "time", "nice")  # just a prefix word
+
+
+def _find_double_amp(s: str) -> int:
+    """Index of the first unquoted '&&' in s, or -1 if not found."""
+    in_single = False
+    in_double = False
+    i = 0
+    while i < len(s) - 1:
+        c = s[i]
+        if c == "'" and not in_double:
+            in_single = not in_single
+        elif c == '"' and not in_single:
+            in_double = not in_double
+        elif c == '&' and s[i + 1] == '&' and not (in_single or in_double):
+            return i
+        i += 1
+    return -1
+
+
+def _strip_wrappers(cmd: str) -> str:
+    """
+    Peel leading wrapper commands so signatures compare the real command.
+
+    Examples:
+      'cd /foo && python bar.py'         -> 'python bar.py'
+      'cd "C:\\path" && pytest -v'        -> 'pytest -v'
+      'sudo apt install foo'             -> 'apt install foo'
+      'time make build'                  -> 'make build'
+      'C:\\Python314\\python.exe foo.py' -> 'C:\\Python314\\python.exe foo.py'
+                                            (no wrapper to strip)
+
+    Conservative: applies up to two passes (e.g. 'cd path && sudo cmd')
+    but never reaches inside quoted strings, parentheses, or subshells.
+    """
+    if not isinstance(cmd, str):
+        return ""
+    s = cmd.strip()
+    for _ in range(2):  # at most two layers - cd && sudo cmd, etc.
+        stripped = False
+        for wrapper in _AMP_WRAPPERS:
+            if s.startswith(wrapper + " ") or s.startswith(wrapper + "\t"):
+                idx = _find_double_amp(s)
+                if idx == -1:
+                    continue  # 'cd foo' alone with no &&; leave it
+                s = s[idx + 2:].strip()
+                stripped = True
+                break
+        if stripped:
+            continue
+        for wrapper in _SIMPLE_WRAPPERS:
+            if s.startswith(wrapper + " ") or s.startswith(wrapper + "\t"):
+                s = s[len(wrapper):].strip()
+                stripped = True
+                break
+        if not stripped:
+            break
+    return s
+
+
 def _bash_body(cmd: str) -> str:
     """Everything after the first non-flag token, normalized."""
     if not isinstance(cmd, str):
@@ -310,23 +374,26 @@ def _bash_body(cmd: str) -> str:
 def _input_signatures(tool_name: str, tool_input: Dict[str, Any]) -> List[str]:
     """
     Return one or more signatures used to pair a success with a recent
-    failure. Multiple signatures = multiple ways the same call might be
-    a retry of an earlier one (different command entirely vs. same
-    command with a flag tweak).
+    failure. For Bash, wrappers (cd/sudo/etc.) are peeled off first so
+    signatures reflect the real command, not its navigation prefix.
+
+    NOTE: Bash matching is body-only. The first-token sig is generated
+    for diagnostic visibility but never used as a match key by itself,
+    because too many real commands share a first token (especially when
+    everything starts with `cd`).
     """
     if not isinstance(tool_input, dict):
         return []
     if tool_name == "Bash":
         cmd = tool_input.get("command", "") or ""
-        first = _bash_first_token(cmd)
-        body = _bash_body(cmd)
+        peeled = _strip_wrappers(cmd)
+        first = _bash_first_token(peeled)
+        body = _bash_body(peeled)
         sigs: List[str] = []
         if first:
-            sigs.append(f"bash:first:{first}")
+            sigs.append(f"bash:first:{first}")  # diagnostic only
         if body:
-            # Body match catches `python foo.py` -> `py foo.py` retries
-            # where the interpreter swap is the whole point.
-            sigs.append(f"bash:body:{body}")
+            sigs.append(f"bash:body:{body}")    # the only matchable sig
         return sigs
     if tool_name in ("Write", "Edit", "MultiEdit"):
         return [f"{tool_name.lower()}::{tool_input.get('file_path', '')}"]
@@ -359,41 +426,41 @@ def find_matching_failure(
     buffer: List[Dict[str, Any]]
 ) -> Optional[Dict[str, Any]]:
     """
-    Look back through the buffer for a recent failure with any signature
-    overlapping the current (successful) call's signatures. Body-match
-    has higher specificity for command-swap retries (python -> py),
-    while first-token match handles same-command-different-flag retries.
+    Look back through the buffer for a recent failure with a matching
+    body signature. For Bash, body-only matching is intentional: two
+    calls only pair if everything-after-the-first-token is identical
+    (after wrappers are peeled). This catches `python foo.py` ->
+    `py foo.py` retries while rejecting unrelated calls that happen to
+    share a first token like `cd` or `git`.
+
+    For non-Bash tools, all signatures are matchable.
     """
     sigs = set(_input_signatures(tool_name, current_input))
     if not sigs:
         return None
-    # Walk newest-to-oldest. Prefer body matches over first-token matches
-    # (more specific - implies the rest of the command is identical).
-    body_sigs = {s for s in sigs if s.startswith("bash:body:")}
-    other_sigs = sigs - body_sigs
 
-    def _check(entry_sigs_str: Any, against: set) -> bool:
-        # entry["sigs"] is stored as list; older entries had "sig" str.
-        if isinstance(entry_sigs_str, list):
-            return any(s in against for s in entry_sigs_str)
-        if isinstance(entry_sigs_str, str):
-            return entry_sigs_str in against
+    if tool_name == "Bash":
+        # Body-only for Bash. Diagnostic first-token sigs are ignored.
+        match_sigs = {s for s in sigs if s.startswith("bash:body:")}
+    else:
+        match_sigs = sigs
+
+    if not match_sigs:
+        return None
+
+    def _check(entry_sigs: Any, against: set) -> bool:
+        if isinstance(entry_sigs, list):
+            return any(s in against for s in entry_sigs)
+        if isinstance(entry_sigs, str):
+            return entry_sigs in against
         return False
 
-    if body_sigs:
-        for entry in reversed(buffer):
-            if entry.get("tool") != tool_name or not entry.get("failed"):
-                continue
-            if entry.get("intentional"):
-                continue
-            if _check(entry.get("sigs") or entry.get("sig"), body_sigs):
-                return entry
     for entry in reversed(buffer):
         if entry.get("tool") != tool_name or not entry.get("failed"):
             continue
         if entry.get("intentional"):
             continue
-        if _check(entry.get("sigs") or entry.get("sig"), other_sigs):
+        if _check(entry.get("sigs") or entry.get("sig"), match_sigs):
             return entry
     return None
 
@@ -579,9 +646,13 @@ def scan_transcript_for_retries(path: str) -> List[Dict[str, Any]]:
                             # A success marked [green] etc. is the paired
                             # half of an intentional failure - skip.
                             continue
-                        # Success: prefer body-sig match over first-token.
-                        body_sigs = {s for s in sigs if s.startswith("bash:body:")}
-                        other_sigs = set(sigs) - body_sigs
+                        # Body-only match for Bash (same as live capture).
+                        if tool == "Bash":
+                            match_sigs = {s for s in sigs if s.startswith("bash:body:")}
+                        else:
+                            match_sigs = set(sigs)
+                        if not match_sigs:
+                            continue
                         match = None
                         for f_entry in reversed(recent_failures):
                             if f_entry["tool"] != tool:
@@ -589,19 +660,9 @@ def scan_transcript_for_retries(path: str) -> List[Dict[str, Any]]:
                             if f_entry.get("intentional"):
                                 continue
                             f_sigs = set(f_entry["sigs"])
-                            if body_sigs and (body_sigs & f_sigs):
+                            if match_sigs & f_sigs:
                                 match = f_entry
                                 break
-                        if match is None:
-                            for f_entry in reversed(recent_failures):
-                                if f_entry["tool"] != tool:
-                                    continue
-                                if f_entry.get("intentional"):
-                                    continue
-                                f_sigs = set(f_entry["sigs"])
-                                if other_sigs & f_sigs:
-                                    match = f_entry
-                                    break
                         if match:
                             new_lessons.append(build_lesson(
                                 tool, match["input"], inp,
