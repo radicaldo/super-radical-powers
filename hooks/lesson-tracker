@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Lesson tracker hook entrypoint.
+#
+# Called via run-hook.cmd, which already routes Windows -> Git Bash and
+# Unix -> bash. This script just resolves a working python and execs the
+# lesson tracker with whatever action arg was passed, forwarding stdin.
+#
+# Fail-open philosophy: if no python is found, we exit 0 silently. A
+# missing tracker should never break the parent hook chain.
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SCRIPT="${PLUGIN_ROOT}/scripts/lesson-tracker.py"
+
+if [ ! -f "$SCRIPT" ]; then
+    exit 0
+fi
+
+# Validate a python candidate by actually running it. This catches the
+# Microsoft Store python.exe stub on Windows, which lives at
+#   %LOCALAPPDATA%/Microsoft/WindowsApps/python3.exe
+# and prints "Python was not found..." with exit code 9009 instead of
+# running anything. command -v finds it; --version exposes it.
+is_real_python() {
+    "$1" -c "import sys" >/dev/null 2>&1
+}
+
+# Order matters:
+#   py        Windows launcher (preferred on Windows because it skips
+#             the Store stub and finds the real install).
+#   python3   Standard on macOS / Linux / WSL. On Windows Git Bash it
+#             often resolves to the Store stub - hence we validate.
+#   python    Generic fallback. On bare Windows can also be the stub.
+for candidate in py python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1 && is_real_python "$candidate"; then
+        exec "$candidate" "$SCRIPT" "$@"
+    fi
+done
+
+# No working python on PATH - fail open.
+exit 0

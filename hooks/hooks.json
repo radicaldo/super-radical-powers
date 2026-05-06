@@ -10,28 +10,50 @@
             "async": false
           }
         ]
-      }
-    ],
-    "TaskStart": [
+      },
       {
-        "matcher": "",
+        "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/lesson-tracker.py inject",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" lesson-tracker inject",
             "async": false
           }
         ]
       }
     ],
-    "TaskComplete": [
+    "PreToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" lesson-tracker inject-subagent",
+            "async": false
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" lesson-tracker capture",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
       {
         "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "python scripts/lesson-tracker.py parse \"{{task_context}}\"",
-            "async": false
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" lesson-tracker scan-subagent",
+            "async": true
           }
         ]
       }
