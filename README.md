@@ -1,8 +1,13 @@
 # Superpowers Extended for Claude Code
 
-A community-maintained fork of [obra/superpowers](https://github.com/obra/superpowers) specifically for Claude Code users.
+Forked the forking from community-maintained fork of [obra/superpowers](https://github.com/obra/superpowers) specifically for Claude Code users.
 
-## Why This Fork Exists
+## Why This fork of a Fork Exists
+
+### My fork:
+I noticed heavy repeating tool calls and commands being used acrossed main and sub agents.  They burn through mountains of tokens on commands because of my messy local environments.  e.g. repeatedly not finding where python is or which version of python windows "py" points to and having to re-run 3-5 commands to figure it out.  In VS Code this caused me to have to "allow" commands over and over again as each sub-agent starts their tasks without knowing about the struggles of the previous agentic tasks.  My workaround/fix is a simple tool tracking mechanism that I hope solves the token overusage by hooking in a type of "lessons learned" injection into the task flows so agents can learn the environment they are running in.  This is being tested as of 5-6-2026 and the concept is not yet proven.
+
+### The og fork's readme starts here:
 
 The original Superpowers is designed as a cross-platform toolkit that works across multiple AI CLI tools (Claude Code, Codex, OpenCode, Gemini CLI). Features unique to Claude Code fall outside the scope of the upstream project due to its [cross-platform nature](https://github.com/obra/superpowers/pull/344#issuecomment-3795515617).
 
