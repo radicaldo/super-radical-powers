@@ -1,6 +1,6 @@
 {
-  "name": "superpowers-extended-cc",
-  "description": "Claude Code-specific fork of Superpowers with native task management and CC-specific enhancements",
+  "name": "super-radical-powers-extended-cc",
+  "description": "Claude Code-specific fork of Superpowers with native task management and CC-specific enhancements and extended session tracking",
   "version": "5.2.8",
   "author": {
     "name": "pcvelz",
