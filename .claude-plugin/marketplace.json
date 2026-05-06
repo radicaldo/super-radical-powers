@@ -2,8 +2,8 @@
   "name": "super-radical-powers-extended-cc-marketplace",
   "description": "Marketplace for Superpowers Extended CC - Claude Code-specific enhancements",
   "owner": {
-    "name": "pcvelz",
-    "email": "pcvelz@users.noreply.github.com"
+    "name": "radicaldo",
+    "email": "radicaldo@users.noreply.github.com"
   },
   "plugins": [
     {
