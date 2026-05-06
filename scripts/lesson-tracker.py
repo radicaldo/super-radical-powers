@@ -98,8 +98,8 @@ def detect_environment() -> str:
 
 def emit_for_host(event_name: str,
                   additional_context: str,
-                  updated_input: Dict[str, Any] = None,
-                  permission_decision: str = None) -> None:
+                  updated_input: Optional[Dict[str, Any]] = None,
+                  permission_decision: Optional[str] = None) -> None:
     """Emit hook output JSON in the shape the current host expects."""
     in_cursor = bool(os.environ.get("CURSOR_PLUGIN_ROOT"))
     in_copilot = bool(os.environ.get("COPILOT_CLI"))
@@ -225,7 +225,7 @@ def save_buffer(entries: List[Dict[str, Any]]) -> None:
     entries = [e for e in entries if e.get("ts", 0) >= cutoff]
     if len(entries) > BUFFER_MAX_ENTRIES:
         entries = entries[-BUFFER_MAX_ENTRIES:]
-    BUFFER_FILE.write_text(json.dumps(entries), encoding="utf-8")
+    BUFFER_FILE.write_text(json.dumps(entries, indent=2), encoding="utf-8")
 
 
 # ---------- failure detection ----------
