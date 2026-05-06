@@ -7,13 +7,13 @@
   },
   "plugins": [
     {
-      "name": "superpowers-extended-cc",
+      "name": "super-radical-powers-extended-cc",
       "description": "Claude Code-specific fork of Superpowers with native task management and CC-specific enhancements",
       "version": "5.2.8",
       "source": "./",
       "author": {
-        "name": "pcvelz",
-        "email": "pcvelz@users.noreply.github.com"
+        "name": "radicaldo",
+        "email": "radicaldo@users.noreply.github.com"
       }
     }
   ]
