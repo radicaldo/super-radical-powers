@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Preflight verify hook entrypoint.
+#
+# Called via run-hook.cmd, which already routes Windows -> Git Bash and
+# Unix -> bash. This script resolves a working python and execs
+# preflight-verify.py with whatever action arg was passed, forwarding stdin.
+#
+# Fail-open: if no python is found or the script is missing, exit 0.
+# A missing preflight should never break the parent hook chain.
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SCRIPT="${PLUGIN_ROOT}/scripts/preflight-verify.py"
+
+if [ ! -f "$SCRIPT" ]; then
+    exit 0
+fi
+
+is_real_python() {
+    "$1" -c "import sys" >/dev/null 2>&1
+}
+
+for candidate in py python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1 && is_real_python "$candidate"; then
+        exec "$candidate" "$SCRIPT" "$@"
+    fi
+done
+
+exit 0

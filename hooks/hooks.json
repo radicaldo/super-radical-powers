@@ -20,6 +20,16 @@
             "async": false
           }
         ]
+      },
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" preflight-verify inject",
+            "async": false
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -29,6 +39,11 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" lesson-tracker inject-subagent",
+            "async": false
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" preflight-verify inject-subagent",
             "async": false
           }
         ]
@@ -53,6 +68,11 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" lesson-tracker scan-subagent",
+            "async": true
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" preflight-verify handoff-parse",
             "async": true
           }
         ]

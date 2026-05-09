@@ -167,6 +167,69 @@ The `json:metadata` block is embedded in the description because `TaskGet` retur
 - **writing-skills** - Create new skills following best practices (includes testing methodology)
 - **using-superpowers** - Introduction to the skills system
 
+### Preflight Verify (Flight Check)
+
+An executable environment contract that agents verify before sprints and re-check when things drift. Solves the "stale environment facts" problem — instead of caching probe results that go stale, define assertions that *prove* the environment is correct on demand.
+
+**How it works:**
+
+1. Run `preflight-verify init` from any project root — it probes your environment (Python, Node, Docker, WSL) and scaffolds `.claude/flight-check.yaml`
+2. At **SessionStart**, environment + project metadata is injected as `additionalContext` (stable content = prompt cache hits every session)
+3. At **PreToolUse (Task)**, assertions are prepended to each subagent's prompt so workers know which correctness contracts they own
+4. At **SubagentStop**, if the worker didn't write a structured handoff file, the script extracts assertion pass/fail signals from the transcript as a fallback
+5. Run `preflight-verify verify --radius all` on demand to re-run all `check_cmds` and block on critical failures
+
+**Flight check concepts:**
+
+| Concept | Description |
+|---------|-------------|
+| **check_cmd** | Shell command that proves an assertion (e.g. `python --version`) |
+| **expected_pattern** | Regex matched against stdout — `"."` means any non-empty output |
+| **critical** | If `true`, failure blocks the session |
+| **blast_radius** | `global` (every session), `project` (this project only), `hooks` (hook config changes only) |
+| **Handoff** | Per-feature structured YAML: prose summary + assertions_checked array + commands_run + issues_discovered |
+
+**Adversarial by design:** Validators run `check_cmds` only — they never read project context, lessons, or implementation code. Stateless at the seam, like a consumer-driven contract test.
+
+**Example `flight-check.yaml`:**
+
+```yaml
+meta:
+  schema_version: "1.0"
+  project: "cloudcost"
+  generated_at: "2026-05-08T10:00:00Z"
+
+environment:
+  host_os: "Windows 11"
+  shell_primary: "powershell"
+  container_runtime: "docker"
+
+runtimes:
+  - id: "python"
+    path: "C:\\Python314\\python.exe"
+    check_cmd: "python --version"
+    expected_pattern: "Python 3.14"
+    critical: true
+
+assertions:
+  - id: "A-001"
+    description: "Correct Python interpreter resolves on PATH"
+    check_cmd: "python -c \"import sys; print(sys.executable)\""
+    expected_pattern: "Python314"
+    critical: true
+    blast_radius: "global"
+  - id: "A-002"
+    description: "Project test suite passes baseline"
+    check_cmd: "uv run pytest --tb=no -q"
+    expected_pattern: "passed"
+    critical: true
+    blast_radius: "project"
+```
+
+**Scripts:** `scripts/preflight-verify.py` (6 modes: init, verify, inject, inject-subagent, handoff-parse, status)
+**Hooks:** `hooks/preflight-verify` (bash dispatch, same fail-open pattern as lesson-tracker)
+**Docs:** `docs/enhancements.md` (full schema, handoff format, architecture rationale)
+
 ## Philosophy
 
 - **Test-Driven Development** - Write tests first, always
