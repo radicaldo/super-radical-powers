@@ -9,6 +9,8 @@ description: Use when you have a spec or requirements for a multi-step task, bef
 
 **You MUST NOT call `EnterPlanMode` or `ExitPlanMode` at any point during this skill.** This skill operates in normal mode and manages its own completion flow via `AskUserQuestion`. Calling `EnterPlanMode` traps the session in plan mode where Write/Edit are restricted. Calling `ExitPlanMode` breaks the workflow and skips the user's execution choice. If you feel the urge to call either, STOP — follow this skill's instructions instead.
 
+Do not use prior plan documents as style templates. Prior plans may predate current length and code-inlining rules. They can be used for general context grounding. Follow the rules in this skill document, not the patterns in existing plans. If a prior plan inlines complete file contents in every step, that is the old pattern — use interface-first instead.
+
 ## Overview
 
 Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
