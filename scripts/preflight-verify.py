@@ -289,14 +289,25 @@ def mode_inject_subagent(fc: dict):
 
     assertions_block = "\n".join(lines)
 
-    # Patch the Task tool's prompt field
-    task_input = hook_input.get("tool_input", {})
+    # Patch the Task tool's prompt field. Claude Code's PreToolUse
+    # contract expects updatedInput to be the new tool_input, nested
+    # inside hookSpecificOutput - not the entire hook payload at the
+    # top level. Match lesson-tracker.cmd_inject_subagent's shape.
+    task_input = hook_input.get("tool_input", {}) or {}
     existing_prompt = task_input.get("prompt", "")
-    task_input["prompt"] = assertions_block + existing_prompt
-    hook_input["tool_input"] = task_input
+    new_prompt = (
+        f"{assertions_block}\n\n---\n\n{existing_prompt}"
+        if existing_prompt else assertions_block
+    )
+    updated_input = {**task_input, "prompt": new_prompt}
 
-    output = {"updatedInput": hook_input,
-              "hookSpecificOutput": {"additionalContext": assertions_block}}
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "additionalContext": assertions_block,
+            "updatedInput": updated_input,
+        }
+    }
     print(json.dumps(output))
 
 
