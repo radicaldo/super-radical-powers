@@ -37,6 +37,10 @@ Before defining tasks, map out which files will be created or modified and what 
 
 This structure informs the task decomposition. Each task should produce self-contained changes that make sense independently.
 
+## Plan Length Target: 
+
+600–1000 lines. Plans over 1000 lines are too long for implementers to hold in context. If a plan exceeds 1000 lines, it's covering too many tasks (split into sub-plans) or inlining too much code (use the interface-first pattern below). Plans under 600 lines may be under-specified.
+
 ## REQUIRED FIRST STEP: Initialize Task Tracking
 
 **BEFORE exploring code or writing the plan, you MUST:**
@@ -137,17 +141,23 @@ git commit -m "feat: add specific feature"
 
 ## No Placeholders
 
-Every step must contain the actual content an engineer needs. These are **plan failures** — never write them:
+Every step must be unambiguous enough that the implementer cannot misinterpret it. These are **plan failures** — never write them:
 - "TBD", "TODO", "implement later", "fill in details"
 - "Add appropriate error handling" / "add validation" / "handle edge cases"
 - "Write tests for the above" (without actual test code)
-- "Similar to Task N" (repeat the code — the engineer may be reading tasks out of order)
-- Steps that describe what to do without showing how (code blocks required for code steps)
+- "Similar to Task N" (repeat the relevant detail — the engineer may be reading tasks out of order)
 - References to types, functions, or methods not defined in any task
+
+**Interface-first, not code-first.** For each step, provide whichever is *smallest* while remaining unambiguous:
+
+- **Test code:** Always inline — tests are the contract the implementer builds against. Non-negotiable.
+- **Signatures and types:** Show function signatures, class/type definitions, and module boundaries. The implementer writes the body.
+- **Full implementation:** Only inline full code when the logic is non-obvious from the signature (tricky SQL, state machines, math formulas, config with gotchas).
+- **"Implement a module that passes these tests"** is a valid step when the tests are already shown. The implementer is a skilled developer — trust them to write code that satisfies explicit acceptance criteria.
 
 ## Remember
 - Exact file paths always
-- Complete code in every step — if a step changes code, show the code
+- Tests are always inlined; implementation code is inlined only when logic is non-obvious
 - Exact commands with expected output
 - DRY, YAGNI, TDD, frequent commits
 
