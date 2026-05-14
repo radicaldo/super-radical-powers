@@ -1,70 +1,16 @@
 # Super Radical Powers
 
-A personal fork of [pcvelz/superpowers-extended-cc](https://github.com/pcvelz/superpowers-extended-cc), itself a Claude Code-focused fork of [obra/superpowers](https://github.com/obra/superpowers).
+A Claude Code skills plugin, forked and extended with a focus on reducing token waste in messy local environments — especially Windows + VS Code + subagent-heavy workflows.
 
-# Why a fork of a Fork Exists
+## What's Radical Here
 
-## My Radical fork optimizations for token usage:
-I noticed heavy repeating tool calls and commands being used acrossed main and sub agents.  They burn through mountains of tokens on commands because of my messy local environments.  e.g. repeatedly not finding where python is or which version of python windows "py" points to and having to re-run 3-5 commands to figure it out.  In VS Code this caused me to have to "allow" commands over and over again as each sub-agent starts their tasks without knowing about the struggles of the previous agentic tasks.  My workaround/fix is a simple tool tracking mechanism that I hope solves the token overusage by hooking in a type of "lessons learned" injection into the task flows so agents can learn the environment they are running in. 
+The core problem: agents on Windows repeatedly re-discover the same environment facts session after session. Where Python lives, which version `py` points to, what paths work. Every subagent starts fresh and burns 3-5 commands re-learning what the previous one already figured out. In VS Code this also means repeated permission prompts as each subagent starts without knowing what the previous task went through.
 
-- Flight check - reviews current running environment and saves details to be injected later
-- Persistent lesson tracking script, hooks, and skill. - injects lessons learned from sub agentic flows by tracking repeated failed commands.  This typically triggers CC to load these into memory once it sees them a few times. 
-- Plan writing skill was updated to reduce the sizes of plans.  The subagent skill was writing 2000+ lines long plans.  This was eating massive amounts of unecessary token use to essentially use claude as a auto transcription.
-  
+Three fixes:
 
--------------------
-
-
-# The old source fork readme starts here:
-
-The original Superpowers is designed as a cross-platform toolkit that works across multiple AI CLI tools (Claude Code, Codex, OpenCode, Gemini CLI). Features unique to Claude Code fall outside the scope of the upstream project due to its [cross-platform nature](https://github.com/obra/superpowers/pull/344#issuecomment-3795515617).
-
-This fork integrates Claude Code-native features into the Superpowers workflow.
-
-### What We Do Differently
-
-- Leverage Claude Code-native features as they're released
-- Community-driven - contributions welcome for any CC-specific enhancement
-- Track upstream - stay compatible with obra/superpowers core workflow
-
-### Current Enhancements
-
-| Feature | Claude Code Version | Description |
-|---------|---------------------|-------------|
-| Native Task Management | v2.1.16+ | Dependency tracking, real-time progress visibility |
-| Structured Task Metadata | v2.1.16+ | Goal/Files/AC/Verify structure with embedded `json:metadata` |
-| Pre-commit Task Gate | v2.1.16+ | Plugin hook blocks `git commit` when tasks are incomplete |
-
-## Visual Comparison
-
-<table>
-<tr>
-<th>Superpowers (Vanilla)</th>
-<th>Superpowers Extended CC</th>
-</tr>
-<tr>
-<td valign="top">
-
-![Vanilla](docs/screenshots/vanilla-session.png)
-
-- Tasks exist only in markdown plan
-- No runtime task visibility
-- Agent may jump ahead or skip tasks
-- Progress tracked manually by reading output
-
-</td>
-<td valign="top">
-
-![Extended CC](docs/screenshots/extended-cc-session.png)
-
-- **Dependency enforcement** - Task 2 blocked until Task 1 completes (no front-running)
-- **Execution on rails** - Native task manager keeps agent following the plan
-- **Real-time visibility** - User sees actual progress with pending/in_progress/completed states
-- **Session-aware** - TaskList shows what's done, what's blocked, what's next
-
-</td>
-</tr>
-</table>
+- **Persistent lesson tracker** — hooks into the session lifecycle and injects environment lessons into every agent and subagent as they start. Agents learn once and stay learned, progressively across sessions.
+- **Flight check (preflight-verify)** — an executable environment contract that agents verify before sprints and re-check when things drift, rather than caching probe results that go stale.
+- **Leaner plan writing** — the upstream plan-writing skill was generating 2000+ line plans, burning tokens on essentially auto-transcription. Updated to write tighter, more actionable plans.
 
 ## Installation
 
@@ -86,8 +32,6 @@ This fork integrates Claude Code-native features into the Superpowers workflow.
 
 ### Verify Installation
 
-Check that commands appear:
-
 ```bash
 /help
 ```
@@ -101,19 +45,19 @@ Check that commands appear:
 
 ## The Basic Workflow
 
-1. **brainstorming** - Activates before writing code. Refines rough ideas through questions, explores alternatives, presents design in sections for validation. Saves design document.
+1. **brainstorming** - Refines rough ideas through questions, explores alternatives, presents design in sections for validation. Saves design document.
 
-2. **using-git-worktrees** - Activates after design approval. Creates isolated workspace on new branch, runs project setup, verifies clean test baseline.
+2. **using-git-worktrees** - Creates isolated workspace on new branch, runs project setup, verifies clean test baseline.
 
-3. **writing-plans** - Activates with approved design. Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, verification steps. *Creates native tasks with dependencies.*
+3. **writing-plans** - Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, verification steps. Creates native tasks with dependencies.
 
-4. **subagent-driven-development** or **executing-plans** - Activates with plan. Dispatches fresh subagent per task with two-stage review (spec compliance, then code quality), or executes in batches with human checkpoints.
+4. **subagent-driven-development** or **executing-plans** - Dispatches fresh subagent per task with two-stage review (spec compliance, then code quality), or executes in batches with human checkpoints.
 
-5. **test-driven-development** - Activates during implementation. Enforces RED-GREEN-REFACTOR: write failing test, watch it fail, write minimal code, watch it pass, commit. Deletes code written before tests.
+5. **test-driven-development** - Enforces RED-GREEN-REFACTOR: write failing test, watch it fail, write minimal code, watch it pass, commit. Deletes code written before tests.
 
-6. **requesting-code-review** - Activates between tasks. Reviews against plan, reports issues by severity. Critical issues block progress.
+6. **requesting-code-review** - Reviews against plan, reports issues by severity. Critical issues block progress.
 
-7. **finishing-a-development-branch** - Activates when tasks complete. Verifies tests, presents options (merge/PR/keep/discard), cleans up worktree.
+7. **finishing-a-development-branch** - Verifies tests, presents options (merge/PR/keep/discard), cleans up worktree.
 
 **The agent checks for relevant skills before any task.** Mandatory workflows, not suggestions.
 
@@ -234,8 +178,8 @@ assertions:
     blast_radius: "project"
 ```
 
-**Scripts:** `scripts/preflight-verify.py` (6 modes: init, verify, inject, inject-subagent, handoff-parse, status)
-**Hooks:** `hooks/preflight-verify` (bash dispatch, same fail-open pattern as lesson-tracker)
+**Scripts:** `scripts/preflight-verify.py` (6 modes: init, verify, inject, inject-subagent, handoff-parse, status)  
+**Hooks:** `hooks/preflight-verify` (bash dispatch, same fail-open pattern as lesson-tracker)  
 **Docs:** `docs/enhancements.md` (full schema, handoff format, architecture rationale)
 
 ## Philosophy
@@ -244,12 +188,6 @@ assertions:
 - **Systematic over ad-hoc** - Process over guessing
 - **Complexity reduction** - Simplicity as primary goal
 - **Evidence over claims** - Verify before declaring success
-
-Read more: [Superpowers for Claude Code](https://blog.fsck.com/2025/10/09/superpowers/)
-
-## Contributing
-
-This is a personal fork. Improvements stay here. Anything that would benefit the broader Claude Code community gets considered for [pcvelz/superpowers-extended-cc](https://github.com/pcvelz/superpowers-extended-cc) upstream.
 
 ## Recommended Configuration
 
@@ -406,15 +344,9 @@ Control which skills Claude can invoke using `skillOverrides` in your Claude Cod
 
 ## Updating
 
-Skills update automatically when you update the plugin:
-
 ```bash
 /plugin update super-radical-powers-extended-cc@super-radical-powers-extended-cc-marketplace
 ```
-
-## Upstream Compatibility
-
-This fork tracks `obra/superpowers` main branch. Changes specific to Claude Code are additive - the core workflow remains compatible.
 
 ## License
 
@@ -423,5 +355,7 @@ MIT License - see LICENSE file for details
 ## Support
 
 - **Issues**: https://github.com/radicaldo/super-radical-powers/issues
-- **Claude Code upstream**: [pcvelz/superpowers-extended-cc](https://github.com/pcvelz/superpowers-extended-cc/issues)
-- **Original upstream**: [obra/superpowers](https://github.com/obra/superpowers/issues)
+
+---
+
+*Built on [obra/superpowers](https://github.com/obra/superpowers) and [pcvelz/superpowers-extended-cc](https://github.com/pcvelz/superpowers-extended-cc).*

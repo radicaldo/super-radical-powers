@@ -7,5 +7,4 @@ __pycache__/
 *.pyc
 inspo
 triage/
-docs/superpowers/plans
-docs/superpowers/specs
+docs/superpowers/
