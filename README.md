@@ -393,7 +393,7 @@ Control which skills Claude can invoke using `skillOverrides` in your Claude Cod
 }
 ```
 
-**Wildcard prefix rules (v2.1.139+):** `Skill(name *)` patterns in permission rules now work as prefix matches. To allow all skills in this plugin:
+**Wildcard prefix rules (v2.1.139+):** `Skill(name *)` patterns in permission rules now work as prefix matches. To allow all skills in this plugin, add to your project's `.claude/settings.json`:
 
 ```json
 {
