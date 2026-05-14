@@ -57,6 +57,8 @@ Each domain is independent - fixing tool approval doesn't affect abort tests.
 
 ### 2. Create Focused Agent Tasks
 
+> **`subagent_type` matching (v2.1.140+):** Values are case- and separator-insensitive. `"Code Reviewer"`, `"code_reviewer"`, and `"code-reviewer"` all resolve to the same agent type.
+
 Each agent gets:
 - **Specific scope:** One test file or subsystem
 - **Clear goal:** Make these tests pass

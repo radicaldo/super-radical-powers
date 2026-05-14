@@ -63,6 +63,8 @@ If TaskList returned no tasks or tasks don't match plan:
 
 ### Step 2: Execute Tasks
 
+> **Tip — `/goal` for unattended runs (v2.1.139+):** Set a completion condition with `/goal "all tasks in the plan are completed"` and Claude keeps working across turns until the condition is met. Works in interactive, `-p`, and Remote Control modes.
+
 For each task:
 1. Mark as in_progress
 2. Follow each step exactly (plan has bite-sized steps)
