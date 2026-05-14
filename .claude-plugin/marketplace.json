@@ -1,5 +1,5 @@
 {
-  "name": "super-radical-powers-extended-cc-marketplace",
+  "name": "super-radical-powers-marketplace",
   "description": "Marketplace for Superpowers Extended CC - Claude Code-specific enhancements",
   "owner": {
     "name": "radicaldo",
@@ -7,7 +7,7 @@
   },
   "plugins": [
     {
-      "name": "super-radical-powers-extended-cc",
+      "name": "super-radical-powers",
       "description": "Claude Code-specific fork of Superpowers with native task management and CC-specific enhancements",
       "version": "5.3.2",
       "source": "./",

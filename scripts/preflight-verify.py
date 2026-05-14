@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-preflight-verify.py — Flight check for super-radical-powers-extended-cc
+preflight-verify.py — Flight check for super-radical-powers
 
 Modes:
   verify         Run check_cmds filtered by blast_radius, update last_verified_at.

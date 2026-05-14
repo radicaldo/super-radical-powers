@@ -21,7 +21,7 @@ Three fixes:
 /plugin marketplace add radicaldo/super-radical-powers
 
 # Install plugin
-/plugin install super-radical-powers-extended-cc@super-radical-powers-extended-cc-marketplace
+/plugin install super-radical-powers@super-radical-powers-marketplace
 ```
 
 ### Option 2: Direct URL
@@ -38,9 +38,9 @@ Three fixes:
 
 ```
 # Should see:
-# /superpowers-extended-cc:brainstorming - Interactive design refinement
-# /superpowers-extended-cc:writing-plans - Create implementation plan
-# /superpowers-extended-cc:executing-plans - Execute plan in batches
+# /super-radical-powers:brainstorming - Interactive design refinement
+# /super-radical-powers:writing-plans - Create implementation plan
+# /super-radical-powers:executing-plans - Execute plan in batches
 ```
 
 ## The Basic Workflow
@@ -326,8 +326,8 @@ Control which skills Claude can invoke using `skillOverrides` in your Claude Cod
 ```json
 {
   "skillOverrides": {
-    "superpowers-extended-cc:brainstorming": "user-invocable-only",
-    "superpowers-extended-cc:writing-plans": "user-invocable-only"
+    "super-radical-powers:brainstorming": "user-invocable-only",
+    "super-radical-powers:writing-plans": "user-invocable-only"
   }
 }
 ```
@@ -337,7 +337,7 @@ Control which skills Claude can invoke using `skillOverrides` in your Claude Cod
 ```json
 {
   "permissions": {
-    "allow": ["Skill(superpowers-extended-cc:*)"]
+    "allow": ["Skill(super-radical-powers:*)"]
   }
 }
 ```
@@ -345,7 +345,7 @@ Control which skills Claude can invoke using `skillOverrides` in your Claude Cod
 ## Updating
 
 ```bash
-/plugin update super-radical-powers-extended-cc@super-radical-powers-extended-cc-marketplace
+/plugin update super-radical-powers@super-radical-powers-marketplace
 ```
 
 ## License
@@ -358,4 +358,4 @@ MIT License - see LICENSE file for details
 
 ---
 
-*Built on [obra/superpowers](https://github.com/obra/superpowers) and [pcvelz/superpowers-extended-cc](https://github.com/pcvelz/superpowers-extended-cc).*
+*Built on [obra/superpowers](https://github.com/obra/superpowers) and [pcvelz/superpowers](https://github.com/pcvelz/superpowers).*

@@ -77,7 +77,7 @@ Key principle: TDD cycles happen WITHIN tasks, not as separate tasks. A task is 
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers-extended-cc:subagent-driven-development (recommended) or superpowers-extended-cc:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use super-radical-powers:subagent-driven-development (recommended) or super-radical-powers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [One sentence describing what this builds]
 
@@ -200,13 +200,13 @@ AskUserQuestion:
 STOP. The user has chosen an execution method. You MUST invoke the corresponding skill using the Skill tool NOW. Do NOT implement tasks yourself — do NOT read files, make edits, or update task statuses. Your ONLY permitted action is invoking the skill below.
 
 **If Subagent-Driven chosen:**
-Invoke the Skill tool: `superpowers-extended-cc:subagent-driven-development`
+Invoke the Skill tool: `super-radical-powers:subagent-driven-development`
 - The skill handles everything: subagent dispatch, review, task tracking
 - You stay in this session as the coordinator
 - Do NOT start working on tasks directly
 
 **If Parallel Session chosen:**
-Guide the user to open a new session in the worktree, then invoke: `superpowers-extended-cc:executing-plans`
+Guide the user to open a new session in the worktree, then invoke: `super-radical-powers:executing-plans`
 </HARD-GATE>
 
 ---
@@ -311,7 +311,7 @@ Both the plan `.md` and `.tasks.json` must be co-located in `docs/superpowers/pl
 
 Any new session can resume by running:
 ```
-/superpowers-extended-cc:executing-plans <plan-path>
+/super-radical-powers:executing-plans <plan-path>
 ```
 
 The skill reads the `.tasks.json` file and continues from where it left off.
