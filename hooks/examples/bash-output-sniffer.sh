@@ -14,6 +14,9 @@
 #   }]
 #
 # Fail-open: any parse/read error exits 0.
+# Note: PostToolUse hooks receive tool INPUT via stdin, not tool output.
+# Tool output must be read from the transcript JSONL file. This script
+# walks the transcript in reverse to find the most recent Bash tool result.
 
 trap 'exit 0' ERR
 set -euo pipefail
@@ -52,7 +55,7 @@ for line in reversed(lines):
         entry = json.loads(line)
     except Exception:
         continue
-    if entry.get('type') != 'tool':
+    if entry.get('type') not in ("tool", "tool_result"):
         continue
     content = entry.get('content', [])
     if isinstance(content, list):
@@ -71,8 +74,8 @@ for line in reversed(lines):
 check_pattern() {
     local pattern="$1"
     local hint="$2"
-    if echo "$LAST_OUTPUT" | grep -qi "$pattern"; then
-        echo "Bash sniffer: $hint" >&2
+    if echo "$LAST_OUTPUT" | grep -qiF "$pattern"; then
+        echo "bash-sniffer: $hint" >&2
         exit 2
     fi
 }
