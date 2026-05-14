@@ -98,6 +98,11 @@ git worktree add "$path" -b "$BRANCH_NAME"
 cd "$path"
 ```
 
+> **`worktree.baseRef` (v2.1.133+):** New worktrees now branch from `origin/<default>` by default, not local `HEAD`. If you have unpushed commits you want included in the new worktree, add to your Claude Code settings:
+> ```json
+> { "worktree": { "baseRef": "head" } }
+> ```
+
 ### 3. Run Project Setup
 
 Auto-detect and run appropriate setup:
