@@ -1,6 +1,6 @@
-# Superpowers Extended for Claude Code
+# Super Radical Powers
 
-Forked the forking from community-maintained fork of [obra/superpowers](https://github.com/obra/superpowers) specifically for Claude Code users.
+A personal fork of [pcvelz/superpowers-extended-cc](https://github.com/pcvelz/superpowers-extended-cc), itself a Claude Code-focused fork of [obra/superpowers](https://github.com/obra/superpowers).
 
 ## Why This fork of a Fork Exists
 
@@ -64,16 +64,16 @@ This fork integrates Claude Code-native features into the Superpowers workflow.
 
 ```bash
 # Register marketplace
-/plugin marketplace add pcvelz/superpowers
+/plugin marketplace add radicaldo/super-radical-powers
 
 # Install plugin
-/plugin install superpowers-extended-cc@superpowers-extended-cc-marketplace
+/plugin install super-radical-powers-extended-cc@super-radical-powers-extended-cc-marketplace
 ```
 
 ### Option 2: Direct URL
 
 ```bash
-/plugin install --source url https://github.com/pcvelz/superpowers.git
+/plugin install --source url https://github.com/radicaldo/super-radical-powers.git
 ```
 
 ### Verify Installation
@@ -241,14 +241,7 @@ Read more: [Superpowers for Claude Code](https://blog.fsck.com/2025/10/09/superp
 
 ## Contributing
 
-Contributions for Claude Code-specific enhancements are welcome!
-
-1. Fork this repository
-2. Create a branch for your enhancement
-3. Follow the `writing-skills` skill for creating and testing new skills
-4. Submit a PR
-
-See `skills/writing-skills/SKILL.md` for the complete guide.
+This is a personal fork. Improvements stay here. Anything that would benefit the broader Claude Code community gets considered for [pcvelz/superpowers-extended-cc](https://github.com/pcvelz/superpowers-extended-cc) upstream.
 
 ## Recommended Configuration
 
@@ -408,7 +401,7 @@ Control which skills Claude can invoke using `skillOverrides` in your Claude Cod
 Skills update automatically when you update the plugin:
 
 ```bash
-/plugin update superpowers-extended-cc@superpowers-extended-cc-marketplace
+/plugin update super-radical-powers-extended-cc@super-radical-powers-extended-cc-marketplace
 ```
 
 ## Upstream Compatibility
@@ -421,5 +414,6 @@ MIT License - see LICENSE file for details
 
 ## Support
 
-- **Issues**: https://github.com/pcvelz/superpowers/issues
-- **Upstream**: https://github.com/obra/superpowers
+- **Issues**: https://github.com/radicaldo/super-radical-powers/issues
+- **Claude Code upstream**: [pcvelz/superpowers-extended-cc](https://github.com/pcvelz/superpowers-extended-cc/issues)
+- **Original upstream**: [obra/superpowers](https://github.com/obra/superpowers/issues)
