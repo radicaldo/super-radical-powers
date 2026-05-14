@@ -283,7 +283,7 @@ Opt in via `.claude/settings.local.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "bash ~/.claude/plugins/marketplaces/superpowers-extended-cc-marketplace/hooks/examples/pre-commit-check-tasks.sh"
+            "args": ["/bin/bash", "${CLAUDE_PLUGIN_ROOT}/hooks/examples/pre-commit-check-tasks.sh"]
           }
         ]
       }
@@ -309,7 +309,7 @@ Opt in via `.claude/settings.local.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "bash ~/.claude/plugins/marketplaces/superpowers-extended-cc-marketplace/hooks/examples/stop-deflection-guard.sh"
+            "args": ["/bin/bash", "${CLAUDE_PLUGIN_ROOT}/hooks/examples/stop-deflection-guard.sh"]
           }
         ]
       }
@@ -319,6 +319,60 @@ Opt in via `.claude/settings.local.json`:
 ```
 
 See the header of `hooks/examples/stop-deflection-guard.sh` for the full list of blocked phrases, configuration environment variables, and fail-open behavior.
+
+### Guard Writes and Edits
+
+Optional `PostToolUse` hook that warns when a `Write` produces fewer than 20 lines or an `Edit` removes 3x more lines than it adds. Also flags writes to recognized config files (`.env*`, `settings.json`, `*.yaml`, `*.yml`, `*.toml`, `*.cfg`). With `continueOnBlock: true`, the warning feeds back to Claude mid-turn rather than stopping it.
+
+Opt in via `.claude/settings.local.json`:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "continueOnBlock": true,
+            "args": ["/bin/bash", "${CLAUDE_PLUGIN_ROOT}/hooks/examples/write-edit-guard.sh"]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+See the header of `hooks/examples/write-edit-guard.sh` for configuration details and fail-open behavior.
+
+### Sniff Bash Output for Errors
+
+Optional `PostToolUse` hook that scans Bash tool output for common error patterns (`Permission denied`, `command not found`, `No such file or directory`, `ModuleNotFoundError`, `ENOENT`, `Cannot find module`, `Error: EPERM`) and injects a pattern-specific recovery hint back to Claude.
+
+Opt in via `.claude/settings.local.json`:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "continueOnBlock": true,
+            "args": ["/bin/bash", "${CLAUDE_PLUGIN_ROOT}/hooks/examples/bash-output-sniffer.sh"]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+See the header of `hooks/examples/bash-output-sniffer.sh` for the full pattern list and fail-open behavior.
 
 ## Updating
 
