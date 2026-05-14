@@ -1,13 +1,13 @@
 {
   "name": "super-radical-powers-extended-cc",
-  "description": "Claude Code-specific fork of Superpowers with native task management and CC-specific enhancements and extended session tracking",
+  "description": "Claude Code-specific fork of Superpowers with native task management, CC-specific enhancements, and extended session tracking",
   "version": "5.3.2",
   "author": {
-    "name": "pcvelz",
-    "email": "pcvelz@users.noreply.github.com"
+    "name": "radicaldo",
+    "email": "radicaldo@users.noreply.github.com"
   },
-  "homepage": "https://github.com/pcvelz/superpowers",
-  "repository": "https://github.com/pcvelz/superpowers",
+  "homepage": "https://github.com/radicaldo/super-radical-powers",
+  "repository": "https://github.com/radicaldo/super-radical-powers",
   "license": "MIT",
   "keywords": [
     "skills",
