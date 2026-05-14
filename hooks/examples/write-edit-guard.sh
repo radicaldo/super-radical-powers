@@ -43,17 +43,18 @@ FILE_PATH=$(echo "$INPUT" | "$PY" -c "import json,sys; d=json.load(sys.stdin); p
 
 # Sensitive file check — matches .env*, settings.json, *.yaml, *.toml, *.cfg at any depth
 BASENAME=$(basename "$FILE_PATH")
-if echo "$BASENAME" | grep -qE '^\.env|^settings\.json$|\.yaml$|\.toml$|\.cfg$'; then
-    echo "Write guard: '${BASENAME}' is a recognized config file. Verify this change is intentional before continuing." >&2
+if echo "$BASENAME" | grep -qE '^\.env|^settings\.json$|\.ya?ml$|\.toml$|\.cfg$'; then
+    echo "file-guard: '${BASENAME}' is a recognized config file. Verify this change is intentional before continuing." >&2
     exit 2
 fi
 
 # Size collapse check
 if [[ "$TOOL_NAME" == "Write" ]]; then
-    CONTENT=$(echo "$INPUT" | "$PY" -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('content',''))" 2>/dev/null || echo "")
-    LINE_COUNT=$(echo "$CONTENT" | wc -l | tr -d ' ')
+    LINE_COUNT=$(echo "$INPUT" | "$PY" -c \
+      "import json,sys; d=json.load(sys.stdin); c=d.get('tool_input',{}).get('content',''); print(len(c.splitlines()))" \
+      2>/dev/null || echo "0")
     if [[ "${LINE_COUNT:-0}" -lt 20 && "${LINE_COUNT:-0}" -gt 0 ]]; then
-        echo "Write guard: '${BASENAME}' was written with only ${LINE_COUNT} lines. If this replaced a larger file, verify it was intentional." >&2
+        echo "file-guard: '${BASENAME}' was written with only ${LINE_COUNT} lines. If this replaced a larger file, verify it was intentional." >&2
         exit 2
     fi
 fi
@@ -64,7 +65,7 @@ if [[ "$TOOL_NAME" == "Edit" ]]; then
     if [[ "${OLD_LINES:-0}" -gt 0 && "${NEW_LINES:-0}" -gt 0 ]]; then
         RATIO=$(( OLD_LINES * 10 / NEW_LINES ))
         if [[ "$RATIO" -ge 30 ]]; then
-            echo "Write guard: Edit in '${BASENAME}' removed ~$((OLD_LINES - NEW_LINES)) lines (${OLD_LINES} → ${NEW_LINES}). Verify this contraction was intentional." >&2
+            echo "file-guard: Edit in '${BASENAME}' removed ~$((OLD_LINES - NEW_LINES)) lines (${OLD_LINES} → ${NEW_LINES}). Verify this contraction was intentional." >&2
             exit 2
         fi
     fi
