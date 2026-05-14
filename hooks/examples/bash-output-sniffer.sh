@@ -18,16 +18,26 @@
 trap 'exit 0' ERR
 set -euo pipefail
 
+# Resolve a working Python interpreter (python3 preferred; fall back to python)
+PY=$(command -v python3 2>/dev/null || command -v python 2>/dev/null || echo "")
+if [[ -n "$PY" ]]; then
+    # Verify the resolved interpreter is not a stub (e.g. Windows Store redirect)
+    if ! echo "" | "$PY" -c "import sys; sys.exit(0)" 2>/dev/null; then
+        PY=$(command -v python 2>/dev/null || echo "")
+    fi
+fi
+[[ -z "$PY" ]] && exit 0
+
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_name',''))" 2>/dev/null || echo "")
+TOOL_NAME=$(echo "$INPUT" | "$PY" -c "import json,sys; d=json.load(sys.stdin); print(d.get('tool_name',''))" 2>/dev/null || echo "")
 [[ "$TOOL_NAME" != "Bash" ]] && exit 0
 
-TRANSCRIPT_PATH=$(echo "$INPUT" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('transcript_path',''))" 2>/dev/null || echo "")
+TRANSCRIPT_PATH=$(echo "$INPUT" | "$PY" -c "import json,sys; d=json.load(sys.stdin); print(d.get('transcript_path',''))" 2>/dev/null || echo "")
 [[ -z "$TRANSCRIPT_PATH" || ! -f "$TRANSCRIPT_PATH" ]] && exit 0
 
 # Extract the last Bash tool result content from the transcript
-LAST_OUTPUT=$(python3 -c "
+LAST_OUTPUT=$("$PY" -c "
 import json, sys
 path = sys.argv[1]
 output = ''
