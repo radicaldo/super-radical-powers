@@ -374,6 +374,35 @@ Opt in via `.claude/settings.local.json`:
 
 See the header of `hooks/examples/bash-output-sniffer.sh` for the full pattern list and fail-open behavior.
 
+### Skill Visibility
+
+Control which skills Claude can invoke using `skillOverrides` in your Claude Code settings. Three values are supported:
+
+- `"off"` — skill is completely hidden from Claude (cannot be invoked at all)
+- `"user-invocable-only"` — skill is only available when the user explicitly types the slash command
+- `"name-only"` — skill is visible by name in listings but Claude cannot read the full skill content
+
+**In your project's `.claude/settings.json`:**
+
+```json
+{
+  "skillOverrides": {
+    "superpowers-extended-cc:brainstorming": "user-invocable-only",
+    "superpowers-extended-cc:writing-plans": "user-invocable-only"
+  }
+}
+```
+
+**Wildcard prefix rules (v2.1.139+):** `Skill(name *)` patterns in permission rules now work as prefix matches. To allow all skills in this plugin:
+
+```json
+{
+  "permissions": {
+    "allow": ["Skill(superpowers-extended-cc:*)"]
+  }
+}
+```
+
 ## Updating
 
 Skills update automatically when you update the plugin:
