@@ -11,6 +11,8 @@ Three fixes:
 - **Persistent lesson tracker** — hooks into the session lifecycle and injects environment lessons into every agent and subagent as they start. Agents learn once and stay learned, progressively across sessions.
 - **Flight check (preflight-verify)** — an executable environment contract that agents verify before sprints and re-check when things drift, rather than caching probe results that go stale.
 - **Leaner plan writing** — the upstream plan-writing skill was generating 2000+ line plans, burning tokens on essentially auto-transcription. Updated to write tighter, more actionable plans.
+- **Found underlying Claude Code "thinking" was extremely verbose, stuttering, and repeating itself** — Fixed in plan writing skill.  Still testing "lite" version which is much faster and writes smaller plans.
+- **Post development branch fixes** — Fixed issue where "finishing-a-development-branch" skill was firing inconsitently and was always deleting the branch rather than asking or tagging.
 
 ## Installation
 
