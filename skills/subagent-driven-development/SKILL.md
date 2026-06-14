@@ -91,6 +91,27 @@ When dispatching an implementer subagent:
 2. Parse the metadata JSON and map fields (files, acceptanceCriteria, verifyCommand) to the implementer prompt sections
 3. The implementer should receive ALL structured data — don't make them parse it from prose
 
+## Parallel Waves (worktree-isolated)
+
+The default loop is sequential: one implementer, two-stage review, next task. When the plan's `.tasks.json` marks several tasks with the same `wave` value, those tasks are independent (no shared `blockedBy`, disjoint file ownership) and may be implemented concurrently. This is the *only* sanctioned way to run implementers in parallel.
+
+**Preconditions — verify before dispatching a wave:**
+- All tasks in the wave share a `wave` value and none blocks another.
+- Their `files` lists are disjoint. The plan asserted this; you re-confirm it. Any overlap → run them sequentially.
+- Wave worktrees branch from `origin/<default>` unless `worktree.baseRef` is `"head"`. If the wave must build on uncommitted local work, commit the controller's branch first (e.g. scaffold the shared contract) or set `worktree.baseRef: head`.
+
+**Dispatch:**
+1. For each task in the wave, dispatch the `implementer` agent (NOT general-purpose). Its `isolation: worktree` frontmatter gives each dispatch a fresh temporary worktree automatically — no manual session, no shared filesystem.
+2. Give each implementer ONLY its own task text, files, and context (same metadata mapping as sequential dispatch).
+3. Cap concurrency at ~3–4 implementers per wave; larger waves queue in batches.
+
+**Collect and merge:**
+1. Each implementer reports DONE with a branch name and changed files. Verify each stayed within its assigned file set.
+2. Merge branches in the plan's stated merge order. Disjoint ownership means clean merges; if a conflict appears, the wave decomposition was wrong — stop and fix the plan, don't hand-resolve.
+3. After the wave is merged into the controller's worktree, run the two-stage review (spec then quality) per task, or one consolidated spec+quality pass over the merged result. Handle reviewer issues normally: re-dispatch that task's implementer to fix.
+
+**When NOT to parallelize:** if any precondition fails — overlapping files, a hidden dependency, or a wave of one — fall back to sequential dispatch. A chain is the correct default, not a failure.
+
 ## Model Selection
 
 Use the least powerful model that can handle each role to conserve cost and increase speed.
@@ -244,7 +265,7 @@ Done!
 - Start implementation on main/master branch without explicit user consent
 - Skip reviews (spec compliance OR code quality)
 - Proceed with unfixed issues
-- Dispatch multiple implementation subagents in parallel (conflicts)
+- Dispatch multiple **general-purpose** implementer subagents in parallel against the shared worktree (conflicts). Parallel dispatch is safe ONLY via the worktree-isolated `implementer` agent for a declared wave — see "Parallel Waves" below.
 - Make subagent read plan file (provide full text instead)
 - Skip scene-setting context (subagent needs to understand where task fits)
 - Ignore subagent questions (answer before letting them proceed)

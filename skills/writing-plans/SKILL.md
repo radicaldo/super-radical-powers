@@ -39,6 +39,29 @@ Before defining tasks, map out which files will be created or modified and what 
 
 This structure informs the task decomposition. Each task should produce self-contained changes that make sense independently.
 
+## Parallelization Analysis
+
+**Required after File Structure, before finalizing tasks.** This is where you decide work ordering — whether tasks form a dependency *chain* (run sequentially) or independent *fan-outs* (run concurrently in isolated worktrees). Most ETL/pipeline work is chains; don't force parallelism where it doesn't exist.
+
+A set of tasks is **parallel-eligible** only when BOTH hold:
+1. **No dependency between them** — none appears in another's `blockedBy` (same topological level of the DAG).
+2. **Disjoint file ownership** — no two of them Create/Modify the same file. Map this from each task's `Files` section. Overlap means sequential, not parallel — same-file concurrent edits lose work.
+
+**The contract-scaffold move:** When tasks share a dependency (a type, schema, interface, fixture), that shared artifact is usually narrow. Hoist it into its own task that runs *first and alone*, then everything downstream becomes parallel-eligible against the frozen contract. One sequential bottleneck unlocks a wave.
+
+**Record the result.** Group parallel-eligible tasks into numbered **waves** and state a **merge order**:
+
+```markdown
+## Parallelization
+
+- **Wave 0 (sequential):** Task 0 — scaffold shared contracts (types, fixtures)
+- **Wave 1 (parallel):** Task 1, Task 2, Task 3 — disjoint file ownership, no cross-deps
+- **Wave 2 (sequential):** Task 4 — integration, depends on Wave 1
+- **Merge order:** 1 → 2 → 3 (no conflicts; non-overlapping files)
+```
+
+Add an optional `"wave"` integer to each task's `json:metadata` (omit for inherently sequential tasks). Tasks sharing a `wave` value with disjoint files are dispatched concurrently by `subagent-driven-development` into isolated worktrees. The `blockedBy` graph remains the source of truth for ordering; `wave` is the derived parallel grouping. If you cannot cleanly assign waves, the work is a chain — leave `wave` off and let it run sequentially. That is a valid, common outcome.
+
 ## Plan Length Target: 
 
 600–1000 lines. Plans over 1000 lines are too long for implementers to hold in context. If a plan exceeds 1000 lines, it's covering too many tasks (split into sub-plans) or inlining too much code (use the interface-first pattern below). Plans under 600 lines may be under-specified.
@@ -298,7 +321,8 @@ If the plan is saved to `docs/superpowers/plans/2026-01-15-feature.md`, the task
       "subject": "Task 1: ...",
       "status": "pending",
       "blockedBy": [0],
-      "description": "**Goal:** ...\n\n```json:metadata\n{\"files\": [], \"verifyCommand\": \"\", \"acceptanceCriteria\": []}\n```"
+      "wave": 1,
+      "description": "**Goal:** ...\n\n```json:metadata\n{\"files\": [], \"verifyCommand\": \"\", \"acceptanceCriteria\": [], \"wave\": 1}\n```"
     }
   ],
   "lastUpdated": "<timestamp>"

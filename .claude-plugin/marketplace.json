@@ -9,7 +9,7 @@
     {
       "name": "super-radical-powers",
       "description": "Claude Code-specific fork of Superpowers with native task management and CC-specific enhancements",
-      "version": "5.3.4",
+      "version": "5.4.0",
       "source": "./",
       "author": {
         "name": "radicaldo",
