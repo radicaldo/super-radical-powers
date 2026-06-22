@@ -46,6 +46,7 @@ git diff {BASE_SHA}..{HEAD_SHA}
 - Tests actually test logic (not mocks)?
 - Edge cases covered?
 - Integration tests where needed?
+- **Reachability / wiring:** Is what this change adds actually reached — called, mounted, registered, routed? For a whole-feature / final review, trace the end-to-end path from the real entry point and flag any capability that is built but never invoked (an *unwired feature*) as Critical. For a single-task review, confirm the task's output has (or is intended to have) a real caller; if the caller is a later task, note it rather than flag it.
 - All tests passing?
 
 **Requirements:**

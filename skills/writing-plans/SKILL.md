@@ -56,11 +56,25 @@ A set of tasks is **parallel-eligible** only when BOTH hold:
 
 - **Wave 0 (sequential):** Task 0 — scaffold shared contracts (types, fixtures)
 - **Wave 1 (parallel):** Task 1, Task 2, Task 3 — disjoint file ownership, no cross-deps
-- **Wave 2 (sequential):** Task 4 — integration, depends on Wave 1
-- **Merge order:** 1 → 2 → 3 (no conflicts; non-overlapping files)
+- **Wave 2 (sequential):** Task 4 — **end-to-end wiring task**: connect the Wave 1 pieces and verify the feature works through its real entry point (integration/e2e test). `blockedBy` all of Wave 1.
+- **Merge order:** 1 → 2 → 3 (no conflicts; non-overlapping files), then 4
 ```
 
 Add an optional `"wave"` integer to each task's `json:metadata` (omit for inherently sequential tasks). Tasks sharing a `wave` value with disjoint files are dispatched concurrently by `subagent-driven-development` into isolated worktrees. The `blockedBy` graph remains the source of truth for ordering; `wave` is the derived parallel grouping. If you cannot cleanly assign waves, the work is a chain — leave `wave` off and let it run sequentially. That is a valid, common outcome.
+
+### Mandatory End-to-End Wiring Task
+
+The contract-scaffold move splits work into independent waves built against a frozen contract. That contract guarantees both sides *compile* against the same types — it does NOT guarantee either side actually *calls* the other. Splitting without rejoining is exactly how plans ship unwired: backend built, frontend built, nothing connected.
+
+So every plan that adds a new user-facing or cross-layer capability MUST end with an **end-to-end wiring task** — the mandatory mirror of the contract-scaffold move:
+
+- It is the final task, in its own sequential wave, `blockedBy` every wave that contributes to the feature.
+- Its `verifyCommand` MUST exercise the feature through its real entry point — an integration / e2e / smoke test or runtime check that crosses the layers the waves built in isolation. A unit test that re-checks one component does NOT satisfy this.
+- Its acceptance criteria assert the path is connected — e.g. "clicking X in the UI triggers the real backend call and renders the response", "endpoint Y is registered on the router and reachable from the client", "the new handler is subscribed to the event it must handle".
+
+If the wire genuinely can't be completed in this plan (a real external blocker), record a **documented wiring exception** in the task instead of dropping it — state what's unwired, the blocker, and the follow-up. See `skills/shared/task-format-reference.md`.
+
+If the change has no new entry point (a pure refactor or internal change), you may omit the wiring task — but the Self-Review reachability check below still applies.
 
 ## Plan Length Target: 
 
@@ -195,6 +209,8 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 **2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them.
 
 **3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
+
+**4. Reachability (wiring) check:** For every new capability a task creates, point to the task that makes a real caller invoke it — every new backend endpoint/service has a task wiring a caller to it; every new UI affordance has a task connecting it to a real backend call. A symbol defined by some task but called by none means the plan is unwired: add the wiring task (or a documented wiring exception). Confirm the plan ends with an end-to-end wiring task whose verify exercises the real entry point. See `skills/shared/task-format-reference.md`.
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 

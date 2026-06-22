@@ -60,7 +60,7 @@ digraph process {
 
     "Read plan, extract tasks, TaskCreate for each with full text" [shape=box];
     "More tasks remain?" [shape=diamond];
-    "Dispatch final code reviewer subagent for entire implementation" [shape=box];
+    "Dispatch final code reviewer subagent for entire implementation (+ end-to-end wiring/reachability check)" [shape=box];
     "Use super-radical-powers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
     "Read plan, extract tasks, TaskCreate for each with full text" -> "Dispatch implementer subagent (skills/subagent-driven-development/implementer-prompt.md)";
@@ -79,10 +79,20 @@ digraph process {
     "Code quality reviewer subagent approves?" -> "TaskUpdate: mark task completed" [label="yes"];
     "TaskUpdate: mark task completed" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (skills/subagent-driven-development/implementer-prompt.md)" [label="yes"];
-    "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
-    "Dispatch final code reviewer subagent for entire implementation" -> "Use super-radical-powers:finishing-a-development-branch";
+    "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation (+ end-to-end wiring/reachability check)" [label="no"];
+    "Dispatch final code reviewer subagent for entire implementation (+ end-to-end wiring/reachability check)" -> "Use super-radical-powers:finishing-a-development-branch";
 }
 ```
+
+## Final Review: End-to-End Wiring (Whole Implementation)
+
+The per-task spec reviewer sees only one task's diff, so it structurally cannot tell whether the finished feature is *connected*. That is the final reviewer's job. When you dispatch the final code reviewer for the entire implementation, in addition to the standard review it MUST perform a **reachability check** over the whole change:
+
+- Trace the feature from its real entry point (UI action, route, CLI command, caller) through to the new code. Is the path actually connected, or were components built and unit-tested but never invoked?
+- A capability defined by some task but called by no one — a backend endpoint never hit by the frontend, a handler never registered, a component never mounted — is an **unwired feature**. Report it as a Critical issue.
+- Accept a **documented wiring exception** (a recorded blocker with a follow-up) as resolved; flag an *undocumented* gap as Critical.
+
+Give the final reviewer the full git range (BASE..HEAD across all tasks) and the plan's end-to-end wiring task, so it can confirm the wire was actually closed. See `skills/shared/task-format-reference.md`.
 
 ## Dispatching with Metadata
 

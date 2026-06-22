@@ -61,6 +61,20 @@ TaskCreate:
     ```
 ```
 
+## End-to-End Wiring (Required Concept)
+
+A plan is **wired** when the feature it builds is reachable and exercised through its real entry point — a user action flows UI → backend → response, or a caller actually invokes the new capability in production code. Plans that build and unit-test components in isolation but never connect them are **unwired**: every task is green, yet the feature does nothing for its intended purpose.
+
+Three constructs prevent this. Skills MUST use these exact terms:
+
+- **end-to-end wiring task** — a terminal task (the last in the plan, `blockedBy` every other task that contributes to the feature) whose job is to connect the pieces and prove the connection. Its `verifyCommand` MUST exercise the feature through its real entry point (an integration / e2e / smoke test, or an equivalent runtime check) — NOT a unit test that re-checks a single component. A plan that adds a new user-facing or cross-layer capability MUST contain one.
+
+- **reachability check** — a self-review pass over the finished plan: for every new backend/capability, name the task that makes a caller invoke it; for every new UI affordance, name the task that connects it to a real backend call. A symbol that is defined by some task but called by none is the signature of an unwired plan. Add the missing wiring task or caller before finalizing.
+
+- **documented wiring exception** — when the end-to-end wire genuinely cannot be completed inside this plan because of a real, external blocker (an unreleased upstream API, a credential or product decision not yet available, an architecture decision still open). Acceptable ONLY when recorded explicitly with: (1) what is not wired, (2) the specific blocker, (3) the follow-up that will close it (issue/task link). It must be surfaced, never silently passed.
+
+A purely internal change with no new entry point (a refactor, a docs edit, a self-contained library function whose callers already exist) does not need a new wiring task — but the reachability check still applies: confirm existing callers still reach the changed code.
+
 ## Task Granularity
 
 ### The Right Scope

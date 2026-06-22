@@ -77,6 +77,12 @@ Use this scope test:
 
 If a task fails one of those checks, merge it with an adjacent task or split it.
 
+## Wiring / Integration Task (Required)
+
+A plan that adds a new user-facing or cross-layer capability MUST end with an **end-to-end wiring task** — the final task that connects the pieces and proves the feature works through its real entry point. Its **Verify** must exercise the feature end-to-end (integration / e2e / smoke), not re-run a single component's unit test. Without it, plans ship "built but never attached to the UI."
+
+If a real external blocker prevents the full wire, record a **documented wiring exception** (what's unwired, the blocker, the follow-up) instead of dropping it. Pure internal changes with no new entry point may skip the wiring task, but the reachability check below still applies. See `skills/shared/task-format-reference.md`.
+
 ## Plan Document Header
 
 Every plan must start with this header:
@@ -163,6 +169,7 @@ After writing the plan, do a short self-review:
 2. Placeholder scan: remove vague language.
 3. Type consistency: names and interfaces match across tasks.
 4. Concision pass: remove generic explanation and repeated boilerplate.
+5. Reachability (wiring) check: every new capability has a task wiring a real caller to it (UI affordance → real backend call; new endpoint/service → a caller). A symbol defined but never called = unwired; add the wiring task or a documented wiring exception.
 
 If you find gaps, fix them inline.
 
