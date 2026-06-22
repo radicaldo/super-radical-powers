@@ -90,8 +90,12 @@ git pull
 
 # Merge feature branch with --no-ff so the branch context is preserved
 # in the merge commit (even after the branch ref is gone, the merge
-# commit shows where the work came from)
-git merge --no-ff <feature-branch>
+# commit shows where the work came from).
+# Record the Step 1.5 wiring status in the merge commit — especially a
+# documented wiring exception — so the record survives on the base branch.
+git merge --no-ff <feature-branch> \
+  -m "Merge <feature-branch>" \
+  -m "Wiring: <Wired via <entry point>, verified by <command>  —OR—  Documented wiring exception: <what's unwired> / blocker: <blocker> / follow-up: <issue>>"
 
 # Verify tests on merged result
 <test command>
