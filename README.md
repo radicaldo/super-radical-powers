@@ -1,20 +1,75 @@
-# Super Radical Powers
+# ⚡ Super Radical Powers
 
-A Claude Code skills plugin, forked and extended with a focus on reducing token waste in messy local environments — especially Windows + VS Code + subagent-heavy workflows.
+> A Claude Code skills plugin — forked and extended to stop agents from wasting tokens in messy local environments, and to stop them from shipping features that were never actually wired up.
 
-## What's Radical Here
+![version](https://img.shields.io/badge/version-5.5.0-6f42c1)
+![license](https://img.shields.io/badge/license-MIT-3fb950)
+![harnesses](https://img.shields.io/badge/harnesses-Claude%20Code%20%7C%20Cursor%20%7C%20Gemini%20%7C%20Codex-fb8c00)
+![focus](https://img.shields.io/badge/focus-Windows%20%2B%20VS%20Code%20%2B%20subagents-1f6feb)
+![built on](https://img.shields.io/badge/built%20on-superpowers-555)
+
+A focused fork of [obra/superpowers](https://github.com/obra/superpowers), tuned for **Windows + VS Code + subagent-heavy workflows** — where the same environment facts get re-discovered every session and where "all tests pass" too often hides a feature that nobody ever connected to its real entry point.
+
+---
+
+## ✨ Highlights
+
+| | |
+|---|---|
+| 🔌 **End-to-end wiring gate** | Plans now end with a wiring task, and the merge gate refuses features that were built + unit-tested but never connected to a real entry point. |
+| 🧠 **Persistent lesson tracker** | Environment lessons are injected into every agent and subagent at start. Learn once, stay learned — across sessions. |
+| 🛫 **Preflight (flight check)** | An executable environment contract agents *prove* on demand, instead of caching probe results that go stale. |
+| ⚡ **Parallel by default** | A worktree-isolated `implementer` agent plus planning nudges that fan independent work out into safe parallel waves. |
+| ✂️ **Leaner plans** | Tighter, more actionable plans instead of 2000-line auto-transcription. |
+
+## 🧩 What's Radical Here
 
 The core problem: agents on Windows repeatedly re-discover the same environment facts session after session. Where Python lives, which version `py` points to, what paths work. Every subagent starts fresh and burns 3-5 commands re-learning what the previous one already figured out. In VS Code this also means repeated permission prompts as each subagent starts without knowing what the previous task went through.
 
-# Radicaldo Optimizations as of 5-19-2026:
+The second problem, just as expensive: a plan finishes with every task green, every unit test passing — and the feature still does nothing, because the pieces were built but never attached to the UI action, route, or caller a user actually hits. This fork treats that **unwired** state as a first-class failure and gates against it.
+
+## 🆕 What's New in v5.5.0 (June 2026)
+
+### 🔌 End-to-end wiring gate
+
+> A plan is **wired** when the feature it builds is reachable and exercised through its real entry point — a user action flows UI → backend → response, or a caller actually invokes the new capability in production code. Plans that build and unit-test components in isolation but never connect them are **unwired**: every task is green, yet the feature does nothing for its intended purpose.
+
+Three constructs now run through the planning and review skills, using one shared vocabulary:
+
+- **End-to-end wiring task** — a terminal task (last in the plan, `blockedBy` every task that feeds the feature) whose `verifyCommand` exercises the feature through its real entry point — an integration / e2e / smoke test, not a unit test re-checking one component.
+- **Reachability check** — a self-review pass: for every new backend capability, name the task that makes a caller invoke it; for every new UI affordance, name the task that connects it to a real backend call. A symbol defined by some task but called by none is the signature of an unwired plan.
+- **Documented wiring exception** — when the wire genuinely can't be completed in this plan (unreleased upstream API, pending product/credential decision, open architecture question), that's acceptable **only** when recorded explicitly: what's not wired, the blocker, and the follow-up to close it. Surfaced, never silently passed.
+
+Where it's enforced:
+
+| Skill | What changed |
+|---|---|
+| `writing-plans` / `writing-plans-lite` | Require a terminal end-to-end wiring task and a reachability self-review before a plan is finalized. |
+| `subagent-driven-development` / `requesting-code-review` | Final review adds a whole-implementation reachability check across the finished work. |
+| `finishing-a-development-branch` | New **Step 1.5 wiring gate** before offering merge options; records wiring status in the PR body and merge commit; refuses to silently merge an unwired feature. |
+| `shared/task-format-reference` | Canonical wiring vocabulary all the skills draw from. |
+
+### ⚡ More parallelism by default
+
+- **New `implementer` agent** — a worktree-isolated implementation agent for parallel task execution. Each dispatch runs in its own temporary git worktree, so concurrent edits across a wave can't collide, with a strict file-ownership boundary that makes a worker stop and report rather than touch a sibling's files.
+- **Planning nudges** — `writing-plans` and `subagent-driven-development` now push toward decomposing independent work into parallel-eligible waves instead of a single sequential chain.
+
+### 🧠 Smarter brainstorming options
+
+When `brainstorming` proposes 2-3 approaches, each option now carries a rough **effort-level / time estimate** next to it, so you can weigh cost against value before choosing a direction.
+
+<details>
+<summary><strong>Earlier optimizations (v5.4 and before)</strong></summary>
 
 - **Persistent lesson tracker** — hooks into the session lifecycle and injects environment lessons into every agent and subagent as they start. Agents learn once and stay learned, progressively across sessions.
 - **Flight check (preflight-verify)** — an executable environment contract that agents verify before sprints and re-check when things drift, rather than caching probe results that go stale.
 - **Leaner plan writing** — the upstream plan-writing skill was generating 2000+ line plans, burning tokens on essentially auto-transcription. Updated to write tighter, more actionable plans.
-- **Found underlying Claude Code "thinking" was extremely verbose, stuttering, and repeating itself** — Fixed in plan writing skill.  Still testing "lite" version which is much faster and writes smaller plans.
-- **Post development branch fixes** — Fixed issue where "finishing-a-development-branch" skill was firing inconsitently and was always deleting the branch rather than asking or tagging.
+- **Less verbose "thinking"** — found underlying Claude Code thinking was extremely verbose, stuttering, and repeating itself. Fixed in the plan-writing skill; a faster "lite" variant writes smaller plans.
+- **Post development branch fixes** — fixed `finishing-a-development-branch` firing inconsistently and always deleting the branch rather than asking or tagging.
 
-## Installation
+</details>
+
+## 📦 Installation
 
 ### Option 1: Via Marketplace (recommended)
 
@@ -45,25 +100,25 @@ The core problem: agents on Windows repeatedly re-discover the same environment 
 # /super-radical-powers:executing-plans - Execute plan in batches
 ```
 
-## The Basic Workflow
+## 🔄 The Basic Workflow
 
-1. **brainstorming** - Refines rough ideas through questions, explores alternatives, presents design in sections for validation. Saves design document.
+1. **brainstorming** — Refines rough ideas through questions, explores alternatives, presents design in sections for validation. Each proposed approach now shows a rough effort/time estimate. Saves a design document.
 
-2. **using-git-worktrees** - Creates isolated workspace on new branch, runs project setup, verifies clean test baseline.
+2. **using-git-worktrees** — Creates an isolated workspace on a new branch, runs project setup, verifies a clean test baseline.
 
-3. **writing-plans** - Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, verification steps. Creates native tasks with dependencies.
+3. **writing-plans** — Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, verification steps, and native task dependencies — plus a **terminal end-to-end wiring task** and a reachability self-review so a feature is never left built-but-disconnected.
 
-4. **subagent-driven-development** or **executing-plans** - Dispatches fresh subagent per task with two-stage review (spec compliance, then code quality), or executes in batches with human checkpoints.
+4. **subagent-driven-development** or **executing-plans** — Dispatches a fresh subagent per task with two-stage review (spec compliance, then code quality), fanning parallel-eligible tasks into worktree-isolated waves where it can. Final review includes a whole-implementation reachability check. (Or run in batches with human checkpoints.)
 
-5. **test-driven-development** - Enforces RED-GREEN-REFACTOR: write failing test, watch it fail, write minimal code, watch it pass, commit. Deletes code written before tests.
+5. **test-driven-development** — Enforces RED-GREEN-REFACTOR: write a failing test, watch it fail, write minimal code, watch it pass, commit. Deletes code written before tests.
 
-6. **requesting-code-review** - Reviews against plan, reports issues by severity. Critical issues block progress.
+6. **requesting-code-review** — Reviews against the plan, reports issues by severity, and checks the whole implementation is reachable end-to-end. Critical issues block progress.
 
-7. **finishing-a-development-branch** - Verifies tests, presents options (merge/PR/keep/discard), cleans up worktree.
+7. **finishing-a-development-branch** — Verifies tests, runs the **end-to-end wiring gate** (Step 1.5) and records wiring status, then presents options (merge/PR/keep/discard) and cleans up the worktree.
 
 **The agent checks for relevant skills before any task.** Mandatory workflows, not suggestions.
 
-## How Native Tasks Work
+## 🗂️ How Native Tasks Work
 
 When `writing-plans` creates tasks, each task carries structured metadata that survives across sessions and subagent dispatch:
 
@@ -95,31 +150,36 @@ TaskCreate:
 
 The `json:metadata` block is embedded in the description because `TaskGet` returns the description but not the `metadata` parameter. This ensures metadata is always available — for `executing-plans` verification, `subagent-driven-development` dispatch, and `.tasks.json` cross-session resume.
 
-## What's Inside
+## 🧰 What's Inside
 
 ### Skills Library
 
 **Testing**
-- **test-driven-development** - RED-GREEN-REFACTOR cycle (includes testing anti-patterns reference)
+- **test-driven-development** — RED-GREEN-REFACTOR cycle (includes testing anti-patterns reference)
 
 **Debugging**
-- **systematic-debugging** - 4-phase root cause process (includes root-cause-tracing, defense-in-depth, condition-based-waiting techniques)
-- **verification-before-completion** - Ensure it's actually fixed
+- **systematic-debugging** — 4-phase root cause process (includes root-cause-tracing, defense-in-depth, condition-based-waiting techniques)
+- **verification-before-completion** — Ensure it's actually fixed
 
 **Collaboration**
-- **brainstorming** - Socratic design refinement + *native task creation*
-- **writing-plans** - Detailed implementation plans + *native task dependencies*
-- **executing-plans** - Batch execution with checkpoints
-- **dispatching-parallel-agents** - Concurrent subagent workflows
-- **requesting-code-review** - Pre-review checklist
-- **receiving-code-review** - Responding to feedback
-- **using-git-worktrees** - Parallel development branches
-- **finishing-a-development-branch** - Merge/PR decision workflow
-- **subagent-driven-development** - Fast iteration with two-stage review (spec compliance, then code quality)
+- **brainstorming** — Socratic design refinement + *native task creation*, with effort/time estimates on each option
+- **writing-plans** — Detailed implementation plans + *native task dependencies* + *terminal wiring task & reachability self-review*
+- **executing-plans** — Batch execution with checkpoints
+- **dispatching-parallel-agents** — Concurrent subagent workflows
+- **requesting-code-review** — Pre-review checklist + whole-implementation reachability check
+- **receiving-code-review** — Responding to feedback
+- **using-git-worktrees** — Parallel development branches
+- **finishing-a-development-branch** — Merge/PR decision workflow + end-to-end wiring gate
+- **subagent-driven-development** — Fast iteration with two-stage review (spec compliance, then code quality), with worktree-isolated parallel waves
 
 **Meta**
-- **writing-skills** - Create new skills following best practices (includes testing methodology)
-- **using-superpowers** - Introduction to the skills system
+- **writing-skills** — Create new skills following best practices (includes testing methodology)
+- **using-superpowers** — Introduction to the skills system
+
+### Agents
+
+- **implementer** — Worktree-isolated implementation agent for parallel task execution. Runs one task from a wave in its own temporary git worktree, with a strict file-ownership boundary so concurrent edits never collide.
+- **code-reviewer** — Reviews a completed step against the original plan and coding standards.
 
 ### Preflight Verify (Flight Check)
 
@@ -184,14 +244,15 @@ assertions:
 **Hooks:** `hooks/preflight-verify` (bash dispatch, same fail-open pattern as lesson-tracker)  
 **Docs:** `docs/enhancements.md` (full schema, handoff format, architecture rationale)
 
-## Philosophy
+## 🧭 Philosophy
 
-- **Test-Driven Development** - Write tests first, always
-- **Systematic over ad-hoc** - Process over guessing
-- **Complexity reduction** - Simplicity as primary goal
-- **Evidence over claims** - Verify before declaring success
+- **Test-Driven Development** — Write tests first, always
+- **Wired, not just green** — A feature isn't done until it's reachable from its real entry point
+- **Systematic over ad-hoc** — Process over guessing
+- **Complexity reduction** — Simplicity as primary goal
+- **Evidence over claims** — Verify before declaring success
 
-## Recommended Configuration
+## ⚙️ Recommended Configuration
 
 ### Disable Auto Plan Mode
 
@@ -344,17 +405,17 @@ Control which skills Claude can invoke using `skillOverrides` in your Claude Cod
 }
 ```
 
-## Updating
+## ⬆️ Updating
 
 ```bash
 /plugin update super-radical-powers@super-radical-powers-marketplace
 ```
 
-## License
+## 📄 License
 
-MIT License - see LICENSE file for details
+MIT License — see LICENSE file for details
 
-## Support
+## 💬 Support
 
 - **Issues**: https://github.com/radicaldo/super-radical-powers/issues
 
