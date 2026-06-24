@@ -26,7 +26,7 @@ You MUST create a task for each of these items and complete them in order:
 1. **Explore project context** — check files, docs, recent commits
 2. **Offer visual companion** (if topic will involve visual questions) — this is its own message, not combined with a clarifying question. See the Visual Companion section below.
 3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
-4. **Propose 2-3 approaches** — with trade-offs and your recommendation with each option's rough estimate of the effort level/time comparison shown next to each choice where applicable
+4. **Propose 2-3 approaches** — with trade-offs and your recommendation; MUST include a relative time/effort anchor per option (e.g., "~2h · baseline", "~3h · +50% vs Option A", "~5h · ~2.5× Option A") so the user can calibrate without guessing what "bigger" means
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
 6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
@@ -84,6 +84,7 @@ digraph brainstorming {
 - Propose 2-3 different approaches with trade-offs
 - Present options conversationally with your recommendation and reasoning
 - Lead with your recommended option and explain why
+- **Always include a relative effort anchor per option.** Pick the simplest option as the baseline (e.g., "~2 hours"), then express the others relative to it ("~3 hours, +50%" or "~5 hours, ~2.5×"). Never describe an option as "biggest" or "most complex" without this anchor — the goal is to let the user judge the real cost difference, not be scared off by vague superlatives. If your estimates are rough, say so, but still give them.
 
 **Presenting the design:**
 
