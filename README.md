@@ -1,4 +1,4 @@
-# ⚡ Super Radical Powers
+# Super Radical Powers
 
 > A Claude Code skills plugin — forked and extended to stop agents from wasting tokens in messy local environments, and to stop them from shipping features that were never actually wired up.
 
@@ -12,25 +12,25 @@ A focused fork of [obra/superpowers](https://github.com/obra/superpowers), tuned
 
 ---
 
-## ✨ Highlights
+##  Highlights
 
 | | |
 |---|---|
-| 🔌 **End-to-end wiring gate** | Plans now end with a wiring task, and the merge gate refuses features that were built + unit-tested but never connected to a real entry point. |
-| 🧠 **Persistent lesson tracker** | Environment lessons are injected into every agent and subagent at start. Learn once, stay learned — across sessions. |
-| 🛫 **Preflight (flight check)** | An executable environment contract agents *prove* on demand, instead of caching probe results that go stale. |
-| ⚡ **Parallel by default** | A worktree-isolated `implementer` agent plus planning nudges that fan independent work out into safe parallel waves. |
-| ✂️ **Leaner plans** | Tighter, more actionable plans instead of 2000-line auto-transcription. |
+|  **End-to-end wiring gate** | Plans now end with a wiring task, and the merge gate refuses features that were built + unit-tested but never connected to a real entry point. |
+|  **Persistent lesson tracker** | Environment lessons are injected into every agent and subagent at start. Learn once, stay learned — across sessions. |
+|  **Preflight (flight check)** | An executable environment contract agents *prove* on demand, instead of caching probe results that go stale. |
+|  **Parallel by default** | A worktree-isolated `implementer` agent plus planning nudges that fan independent work out into safe parallel waves. |
+|  **Leaner plans** | Tighter, more actionable plans instead of 2000-line auto-transcription. |
 
-## 🧩 What's Radical Here
+## What's Radical Here
 
 The core problem: agents on Windows repeatedly re-discover the same environment facts session after session. Where Python lives, which version `py` points to, what paths work. Every subagent starts fresh and burns 3-5 commands re-learning what the previous one already figured out. In VS Code this also means repeated permission prompts as each subagent starts without knowing what the previous task went through.
 
 The second problem, just as expensive: a plan finishes with every task green, every unit test passing — and the feature still does nothing, because the pieces were built but never attached to the UI action, route, or caller a user actually hits. This fork treats that **unwired** state as a first-class failure and gates against it.
 
-## 🆕 What's New in v5.5.0 (June 2026)
+## What's New in v5.5.0 (June 2026)
 
-### 🔌 End-to-end wiring gate
+### End-to-end wiring gate
 
 > A plan is **wired** when the feature it builds is reachable and exercised through its real entry point — a user action flows UI → backend → response, or a caller actually invokes the new capability in production code. Plans that build and unit-test components in isolation but never connect them are **unwired**: every task is green, yet the feature does nothing for its intended purpose.
 
@@ -49,12 +49,12 @@ Where it's enforced:
 | `finishing-a-development-branch` | New **Step 1.5 wiring gate** before offering merge options; records wiring status in the PR body and merge commit; refuses to silently merge an unwired feature. |
 | `shared/task-format-reference` | Canonical wiring vocabulary all the skills draw from. |
 
-### ⚡ More parallelism by default
+### More parallelism by default
 
 - **New `implementer` agent** — a worktree-isolated implementation agent for parallel task execution. Each dispatch runs in its own temporary git worktree, so concurrent edits across a wave can't collide, with a strict file-ownership boundary that makes a worker stop and report rather than touch a sibling's files.
 - **Planning nudges** — `writing-plans` and `subagent-driven-development` now push toward decomposing independent work into parallel-eligible waves instead of a single sequential chain.
 
-### 🧠 Smarter brainstorming options
+### Smarter brainstorming options
 
 When `brainstorming` proposes 2-3 approaches, each option now carries a rough **effort-level / time estimate** next to it, so you can weigh cost against value before choosing a direction.
 
@@ -69,7 +69,7 @@ When `brainstorming` proposes 2-3 approaches, each option now carries a rough **
 
 </details>
 
-## 📦 Installation
+## Installation
 
 ### Option 1: Via Marketplace (recommended)
 
@@ -100,7 +100,7 @@ When `brainstorming` proposes 2-3 approaches, each option now carries a rough **
 # /super-radical-powers:executing-plans - Execute plan in batches
 ```
 
-## 🔄 The Basic Workflow
+## The Basic Workflow
 
 1. **brainstorming** — Refines rough ideas through questions, explores alternatives, presents design in sections for validation. Each proposed approach now shows a rough effort/time estimate. Saves a design document.
 
@@ -118,7 +118,7 @@ When `brainstorming` proposes 2-3 approaches, each option now carries a rough **
 
 **The agent checks for relevant skills before any task.** Mandatory workflows, not suggestions.
 
-## 🗂️ How Native Tasks Work
+## How Native Tasks Work
 
 When `writing-plans` creates tasks, each task carries structured metadata that survives across sessions and subagent dispatch:
 
@@ -150,7 +150,7 @@ TaskCreate:
 
 The `json:metadata` block is embedded in the description because `TaskGet` returns the description but not the `metadata` parameter. This ensures metadata is always available — for `executing-plans` verification, `subagent-driven-development` dispatch, and `.tasks.json` cross-session resume.
 
-## 🧰 What's Inside
+## What's Inside
 
 ### Skills Library
 
@@ -244,7 +244,7 @@ assertions:
 **Hooks:** `hooks/preflight-verify` (bash dispatch, same fail-open pattern as lesson-tracker)  
 **Docs:** `docs/enhancements.md` (full schema, handoff format, architecture rationale)
 
-## 🧭 Philosophy
+## Philosophy
 
 - **Test-Driven Development** — Write tests first, always
 - **Wired, not just green** — A feature isn't done until it's reachable from its real entry point
@@ -252,7 +252,7 @@ assertions:
 - **Complexity reduction** — Simplicity as primary goal
 - **Evidence over claims** — Verify before declaring success
 
-## ⚙️ Recommended Configuration
+## Recommended Configuration
 
 ### Disable Auto Plan Mode
 
@@ -405,17 +405,17 @@ Control which skills Claude can invoke using `skillOverrides` in your Claude Cod
 }
 ```
 
-## ⬆️ Updating
+## Updating
 
 ```bash
 /plugin update super-radical-powers@super-radical-powers-marketplace
 ```
 
-## 📄 License
+## License
 
 MIT License — see LICENSE file for details
 
-## 💬 Support
+## Support
 
 - **Issues**: https://github.com/radicaldo/super-radical-powers/issues
 
