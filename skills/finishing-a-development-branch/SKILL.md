@@ -112,7 +112,20 @@ git tag -a "archive/<feature-branch>" -m "Merged <feature-branch> into <base-bra
 # (The archive tag still preserves history in that case.)
 ```
 
-Then: Worktree handling (Step 5) — keep worktree by default since branch is kept.
+Then ask:
+
+```
+Merge complete. Would you like to clean up the completed work?
+
+a) Delete the feature branch (<feature-branch>) only
+b) Remove the worktree at <path> only
+c) Clean up both branch and worktree
+d) Keep everything as-is
+
+Note: The archive tag preserves history regardless of branch/worktree cleanup.
+```
+
+Execute whichever combination they choose. Then: Step 5.
 
 #### Option 2: Push and Create PR
 
@@ -134,7 +147,7 @@ EOF
 )"
 ```
 
-Then: Cleanup worktree (Step 5)
+Then offer: "Once the PR is approved and merged on GitHub, let me know and I can clean up the branch and worktree." Then: Step 5.
 
 #### Option 3: Keep As-Is
 
@@ -164,13 +177,13 @@ git branch -D <feature-branch>
 
 Then: Cleanup worktree (Step 5)
 
-### Step 5: Cleanup Worktree
+### Step 5: Cleanup
+
+**For Option 1 (Merge Locally):** After successful merge, proactively ask about cleanup using the prompt in Option 1 above. Execute whichever combination the human partner chooses (branch only, worktree only, both, or neither).
 
 **For Option 4 (Discard):** Always remove the worktree.
 
-**For Option 1 (Merge Locally):** Keep the worktree by default since the branch is kept. Only remove if the human partner explicitly requests cleanup.
-
-**For Options 2 and 3:** Keep worktree.
+**For Options 2 and 3:** Keep worktree. For Option 2, offer: "Once the PR is approved and merged on GitHub, let me know and I can clean up the branch and worktree."
 
 Check if in worktree:
 ```bash
@@ -186,8 +199,8 @@ git worktree remove <worktree-path>
 
 | Option | Merge | Push | Tag | Keep Branch | Keep Worktree |
 |--------|-------|------|-----|-------------|---------------|
-| 1. Merge locally | ✓ (--no-ff) | - | ✓ `archive/<name>` | ✓ | ✓ |
-| 2. Create PR | - | ✓ | - | ✓ | ✓ |
+| 1. Merge locally | ✓ (--no-ff) | - | ✓ `archive/<name>` | Ask | Ask |
+| 2. Create PR | - | ✓ | - | ✓ | ✓ (offer cleanup after PR merged) |
 | 3. Keep as-is | - | - | - | ✓ | ✓ |
 | 4. Discard | - | - | - | - (force delete) | - |
 
@@ -202,8 +215,8 @@ git worktree remove <worktree-path>
 - **Fix:** Present exactly 4 structured options
 
 **Automatic worktree cleanup**
-- **Problem:** Remove worktree when the branch is still alive (Options 1, 2, 3)
-- **Fix:** Only cleanup the worktree for Option 4 (Discard), or when the human partner explicitly asks after Option 1
+- **Problem:** Remove worktree when the branch is still alive (Options 2, 3) OR silently keep everything after Option 1 merge without asking
+- **Fix:** For Option 1, always ask about cleanup after the merge. For Options 2/3, keep worktree and offer cleanup once PR is merged. For Option 4, always remove.
 
 **Deleting the feature branch on merge**
 - **Problem:** `git branch -d <feature>` after merge removes the named pointer to the work, making rewind/history-navigation harder even though commits still exist on the base branch
@@ -239,7 +252,8 @@ git worktree remove <worktree-path>
 - Create `archive/<feature-branch>` tag on Option 1 before any cleanup discussion
 - Keep the feature branch on Options 1/2/3; only delete on Option 4 or explicit user request
 - Get typed confirmation for Option 4
-- Clean up worktree only for Option 4 (or Option 1 if user explicitly requests it)
+- Ask about branch/worktree cleanup after Option 1 merge completes; offer it again for Option 2 once the PR is merged on GitHub
+- Clean up worktree only for Option 4 (automatic) or when the human partner chooses a or c in the Option 1 cleanup prompt
 - Run the Step 1.5 wiring gate before offering options; state "Wired" or a documented wiring exception
 
 ## Integration
