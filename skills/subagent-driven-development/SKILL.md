@@ -5,18 +5,20 @@ description: Use when executing implementation plans with independent tasks in t
 
 # Subagent-Driven Development
 
-Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
+Execute plan by dispatching fresh subagents per task, with two-stage review after each: spec compliance review first, then code quality review. Launch multiple subagents in parallel when the plan explicitly marks tasks as independent (disjoint file ownership, no `blockedBy` dependencies) and assigns them the same `wave` value.
 
-**Why subagents:** You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. They should never inherit your session's context or history — you construct exactly what they need. This also preserves your own context for coordination work.
+**Why subagents:** You delegate tasks to specialized agents with isolated context. Precisely craft their instructions and context to ensure they stay focused and succeed at their task. They should never inherit your session's context or history — you construct exactly what they need. This also preserves your own context for coordination work.
 
-**Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
+**Core principle:** Launch a fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration. Maximum agents running in parallel should be limited to 3–4 per wave; larger waves queue in batches. Each subagent should be specialized for its role (implementer, spec reviewer, code quality reviewer).
 
 ## When to Use
+
+In simpler terms "launch more than one subagent on tasks that won't conflict by order or by dependency"
 
 ```dot
 digraph when_to_use {
     "Have implementation plan?" [shape=diamond];
-    "Tasks mostly independent?" [shape=diamond];
+    "Tasks can be executed independently in order?" [shape=diamond];
     "Stay in this session?" [shape=diamond];
     "subagent-driven-development" [shape=box];
     "executing-plans" [shape=box];

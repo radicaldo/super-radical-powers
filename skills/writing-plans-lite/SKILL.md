@@ -32,7 +32,7 @@ Do not auto-transcribe full implementations or expand TDD ritual into every task
 **Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
 - User preferences for plan location override this default.
 
-If the user wants an exhaustive, highly inlined plan, use the original `writing-plans` skill instead.
+If the user wants an exhaustive, highly inlined plan, or the requests have multiple large parts that should be handled separately, use the original `writing-plans` skill instead.
 
 ## Scope Check
 
@@ -198,7 +198,7 @@ AskUserQuestion:
 STOP. The user has chosen an execution method. You MUST invoke the corresponding skill using the Skill tool NOW. Do NOT implement tasks yourself.
 
 **If Subagent-Driven chosen:**
-Invoke the Skill tool: `super-radical-powers:subagent-driven-development`
+Assess tasks for parallelism (disjoint file ownership, no `blockedBy` dependencies, same `wave` value, see Native Task Integration Reference below) and dispatch subagents accordingly. Write waves to the plan document for directing multiple subagents simultaneously then immediately invoke the Skill tool: `super-radical-powers:subagent-driven-development`
 
 **If Parallel Session chosen:**
 Guide the user to open a new session in the worktree, then invoke: `super-radical-powers:executing-plans`
