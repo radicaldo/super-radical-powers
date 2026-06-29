@@ -1,6 +1,6 @@
 ---
 name: offloading-to-local-models
-description: Use when executing an implementation plan and your human partner wants to offload simple, verifiable tasks to a local Ollama model to save Claude API tokens — triggers include "offload", "local model", "ollama", "use my GPU", "save tokens", "spend local compute instead of API".
+description: Use when your human partner asks to execute an implementation plan while spending local GPU/Ollama compute instead of Claude API tokens — triggers: "offload", "local model", "ollama", "use my GPU", "save tokens", "spend local compute instead of API".
 ---
 
 # Offloading to Local Models
@@ -146,7 +146,7 @@ It prints `{"verdict": "...", "reason": "..."}`. Route on the verdict:
   python skills/offloading-to-local-models/offload_worker.py --project <repo-root> enqueue --file <job.json>
   ```
   This prints the new job id. Record it against the task.
-- **`ineligible`** → dispatch a Claude implementer subagent (Claude lane), exactly as `subagent-driven-development` does. The gate has mechanically blocked this task (no verify, multi-file, modify-too-large, or an excluded category). **Do not override it.**
+- **`ineligible`** → dispatch a Claude implementer subagent (Claude lane), exactly as `subagent-driven-development` does. The gate has mechanically blocked this task for one of: no verifyCommand; not exactly one target file (zero or multiple files are both ineligible); modify target over the line threshold; or an excluded category (security, algorithmic, concurrency, architecture, migration). **Do not override it.**
 - **`needs_review`** → **your judgment.** The category is unknown. Offload it ONLY if it is a genuinely simple, self-contained artifact in an allowed category — boilerplate, config/fixtures, format conversion (e.g. JSON↔YAML), docstrings, test scaffolds, or a standalone utility/regex. Otherwise route it to the Claude lane. **When unsure, choose the Claude lane.** A wrong offload costs a verify + fallback; a wrong Claude-lane choice costs only tokens.
 
 **Disjoint-file ownership (non-negotiable).** Never let an offloaded job and a concurrent Claude-lane task — or two concurrent offloaded jobs — write the same file. Before enqueuing, confirm the task's `target_files` overlap no other in-flight work. If they overlap, serialize: wait for the conflicting lane to finish, or route to the Claude lane. Same discipline as subagent-driven-development's parallel waves.
@@ -182,7 +182,7 @@ These are the hard rules. They exist because local 7B–32B models fail in speci
 
 1. **NEVER integrate offloaded output that did not pass its verify.** The local model produces confident-wrong code with no uncertainty signal. The verify run is the ONLY gate. Ignore the model's self-reported `confidence` field — it is decorative, not evidence.
 2. **Whole-file generation only — never diffs.** Local models fail at surgical diff edits; this is the single most-documented failure mode. Never route a diff-edit / surgical-patch task to the Ollama lane. Offloaded tasks produce a complete file, or they go to Claude.
-3. **Never offload hard-excluded work:** correctness-critical / algorithmic logic, security-sensitive code, multi-file refactors, architecture / design / trade-off work. The gate blocks these mechanically (`ineligible`). You must not override the gate to force them through.
+3. **Never offload hard-excluded work:** the gate mechanically blocks the five excluded categories — **security**, **algorithmic** (covers correctness-critical / subtle-logic work), **concurrency**, **architecture**, and **migration** — as `ineligible`. You must not override the gate to force them through.
 4. **If Ollama is unreachable, degrade to plain subagent-driven-development.** Never block, stall, or fail the plan because the local model is down.
 5. **Every failure falls back to Claude.** A failed offload is never left half-done — the worker restores the tree first, then you dispatch a Claude implementer for that task.
 
@@ -193,7 +193,7 @@ These are the hard rules. They exist because local 7B–32B models fail in speci
 - Trust the model's `confidence` field instead of the verify result ("it said high confidence" is not a gate)
 - Route a diff / surgical-edit task to the Ollama lane (whole-file only)
 - Override an `ineligible` gate verdict to force a hard task onto the local model
-- Offload correctness-critical, security-sensitive, algorithmic, multi-file, or architecture work
+- Offload work in an excluded category: security, algorithmic (correctness-critical / subtle-logic), concurrency, architecture, or migration
 - Let an offloaded job and a concurrent task (Claude-lane or another job) write the same file
 - Enqueue a `needs_review` task you are unsure about — when unsure, choose the Claude lane
 - Block the plan because Ollama is down — degrade to plain subagent-driven-development instead
