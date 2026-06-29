@@ -6,6 +6,7 @@ Also provides run_worker() for the session worker loop.
 import os
 import subprocess
 import time
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
@@ -26,21 +27,42 @@ class JobOutcome:
 
 
 def atomic_write(path: Path, content: str) -> None:
-    """Write content to path atomically via a temp file and os.replace."""
+    """Write content to path atomically via a uniquely-named temp file and os.replace."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp = path.parent / f".{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp"
     tmp.write_text(content, encoding="utf-8")
     os.replace(tmp, path)            # atomic on same filesystem
 
 
 def _run_verify(cmd: str, cwd: Path, timeout_s: int) -> bool:
-    """Run the verify command; return True on exit-0, False on non-zero or timeout."""
+    """Run the verify command; return True on exit-0, False on non-zero, timeout, or OS error."""
     try:
         return subprocess.run(
             cmd, shell=True, cwd=str(cwd), timeout=timeout_s
         ).returncode == 0
     except subprocess.TimeoutExpired:
         return False
+    except OSError:
+        return False
+
+
+def _restore(snapshots: list, project_dir: Path) -> None:
+    """
+    Restore files to their pre-write state.
+
+    snapshots: list of (dest_path, original_content_or_None)
+      - original_content is str  → file existed; restore it
+      - original_content is None → file was absent; delete it
+    """
+    for dest, original in snapshots:
+        if original is not None:
+            # File existed before — restore original content
+            atomic_write(dest, original)
+        else:
+            # File was newly created — remove it
+            dest.unlink(missing_ok=True)
+            # Clean up now-empty parent directories we created
+            _remove_empty_parents(dest, project_dir)
 
 
 def process_job(
@@ -57,8 +79,8 @@ def process_job(
     1. Read payload, determine model and verify_command.
     2. Build system+user prompts.
     3. Call the model (injected via client_generate).
-    4. Snapshot then atomic-write each output file.
-    5. Run verify_command.
+    4. Snapshot ALL target files FIRST (before any write).
+    5. Write all files and run verify inside try/finally — restore guaranteed on failure.
     6. On pass: record complete(). On fail: restore snapshots and requeue/fail.
     """
     project_dir = Path(project_dir)
@@ -102,12 +124,10 @@ def process_job(
             queue.fail(job["id"], error)
             return JobOutcome(contracts.ERROR, False, [], error)
 
-    # --- Snapshot existing files before writing ---
+    # --- STEP 1: Snapshot ALL target files BEFORE any write ---
     # snapshot: list of (dest_path, original_content_or_None)
     # None means the file was absent before we wrote it
     snapshots = []  # [(Path, str | None)]
-    files_written = []
-
     for f in result.envelope["files"]:
         dest = project_dir / f["path"]
         if dest.exists():
@@ -115,15 +135,24 @@ def process_job(
         else:
             original = None
         snapshots.append((dest, original))
-        atomic_write(dest, f["content"])
-        files_written.append(f["path"])
 
-    # --- Verify ---
-    if verify_command:
-        passed = _run_verify(verify_command, project_dir, config["timeout_s"])
-    else:
-        passed = False  # no verify command → treat as failure
+    # --- STEP 2: Write all files and verify inside try/finally ---
+    files_written = []
+    passed = False
+    try:
+        for f in result.envelope["files"]:
+            atomic_write(project_dir / f["path"], f["content"])
+            files_written.append(f["path"])
 
+        if verify_command:
+            passed = _run_verify(verify_command, project_dir, config["timeout_s"])
+        else:
+            passed = False  # no verify command → treat as failure
+    finally:
+        if not passed:
+            _restore(snapshots, project_dir)
+
+    # --- STEP 3: Complete or requeue/fail ---
     if passed:
         queue.complete(
             job["id"],
@@ -137,18 +166,8 @@ def process_job(
         )
         return JobOutcome(contracts.DONE, True, files_written, None)
 
-    # --- FAIL path: restore snapshots ---
-    for dest, original in snapshots:
-        if original is not None:
-            # File existed before — restore original content
-            atomic_write(dest, original)
-        else:
-            # File was newly created — remove it
-            dest.unlink(missing_ok=True)
-            # Clean up now-empty parent directories we created
-            _remove_empty_parents(dest, project_dir)
-
-    error = "verify failed"
+    # verify failed (or no verify_command)
+    error = "verify failed" if verify_command else "no verify_command configured"
     if job["attempts"] < config["max_attempts"]:
         queue.requeue(job["id"])
         return JobOutcome(contracts.PENDING, False, [], error)
@@ -184,7 +203,9 @@ def run_worker(
     after idle_timeout seconds of an empty queue (or when stop_flag file exists).
 
     With concurrency=1, jobs are processed serially. With concurrency>1, uses
-    ThreadPoolExecutor to process multiple jobs concurrently (claiming stays serial).
+    ThreadPoolExecutor to process multiple jobs concurrently (claiming stays serial
+    on the main-thread connection; each worker thread opens its own JobQueue
+    connection to avoid sqlite check_same_thread violations).
     """
     from offload.queue import JobQueue
     import concurrent.futures
@@ -193,7 +214,6 @@ def run_worker(
     q = JobQueue(db_path)
 
     idle_since: Optional[float] = None
-    futures = []  # only used when concurrency > 1
 
     try:
         while True:
@@ -222,7 +242,25 @@ def run_worker(
                         break
                     time.sleep(poll)
             else:
-                # Concurrent path using ThreadPoolExecutor
+                # Concurrent path using ThreadPoolExecutor.
+                # Claiming stays on the main-thread queue connection (serial).
+                # Each submitted task opens its OWN JobQueue connection so that
+                # complete/fail/requeue never cross thread boundaries.
+                def _thread_task(job, _db_path=db_path, _config=config,
+                                 _project_dir=project_dir,
+                                 _client_generate=client_generate):
+                    thread_q = JobQueue(_db_path)
+                    try:
+                        process_job(
+                            job,
+                            config=_config,
+                            project_dir=_project_dir,
+                            queue=thread_q,
+                            client_generate=_client_generate,
+                        )
+                    finally:
+                        thread_q.close()
+
                 with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
                     # We enter the executor once and keep submitting until drained+idle
                     in_flight = {}  # future -> job_id
@@ -249,14 +287,7 @@ def run_worker(
                             if job is None:
                                 break
                             _idle_since = None
-                            fut = executor.submit(
-                                process_job,
-                                job,
-                                config=config,
-                                project_dir=project_dir,
-                                queue=q,
-                                client_generate=client_generate,
-                            )
+                            fut = executor.submit(_thread_task, job)
                             in_flight[fut] = job["id"]
 
                         if len(in_flight) == 0:
