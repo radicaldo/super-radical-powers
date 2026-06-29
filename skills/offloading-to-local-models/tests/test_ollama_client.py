@@ -33,3 +33,11 @@ class TestClient(unittest.TestCase):
             self.assertTrue(health_check(url, timeout_s=5))
         with fake_ollama(tags_ok=False) as (url, srv):
             self.assertFalse(health_check(url, timeout_s=5))
+
+    def test_health_check_unreachable(self):
+        import socket
+        s = socket.socket()
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+        s.close()  # nothing is listening on this port now -> connection refused
+        self.assertFalse(health_check(f"http://127.0.0.1:{port}", timeout_s=2))
