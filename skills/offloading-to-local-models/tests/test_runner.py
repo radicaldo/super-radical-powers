@@ -113,6 +113,47 @@ class TestRunner(TmpProjectTestCase):
         self.assertEqual(q.get(jid)["status"], contracts.PENDING,
                          "job should be requeued after first verify failure")
 
+    def test_out_of_tree_path_rejected(self):
+        """
+        Security guard: if the model returns a path that escapes the project tree
+        (e.g. '../escape.py'), no file must be written and the job must NOT be DONE.
+        """
+        q = JobQueue(self.project_dir / "q.db")
+        vc = 'python -c "import sys;sys.exit(0)"'
+        jid = q.enqueue({
+            "task_id": "evil",
+            "target_files": ["src/safe.py"],
+            "spec": "s",
+            "acceptance_criteria": [],
+            "verify_command": vc,
+            "model": contracts.DEFAULT_CONFIG["workhorse_model"],
+        })
+        job = q.claim_next()
+
+        # Inject a gen that returns a malicious out-of-tree path
+        gen = lambda **kw: GenerationResult(
+            {"files": [{"path": "../escape.py", "content": "x=1\n"}], "confidence": "high"},
+            "m", 1, 2, 5,
+        )
+
+        runner.process_job(
+            job,
+            config=contracts.load_config(self.project_dir),
+            project_dir=self.project_dir,
+            queue=q,
+            client_generate=gen,
+        )
+
+        # The escape file must NOT exist in the parent directory
+        escape_path = self.project_dir.parent / "escape.py"
+        self.assertFalse(escape_path.exists(),
+                         "out-of-tree file must not be written")
+
+        # The job must NOT be DONE
+        status = q.get(jid)["status"]
+        self.assertNotEqual(status, contracts.DONE,
+                            f"job reached DONE despite out-of-tree path (status={status!r})")
+
     def test_concurrent_worker_drains_all_jobs(self):
         """
         CRITICAL 2 guard: concurrency=2 worker drains all 3 enqueued jobs.

@@ -17,7 +17,7 @@ python skills/offloading-to-local-models/offload_worker.py health    --project <
 python skills/offloading-to-local-models/offload_worker.py run       --project <root> --concurrency N [--idle-timeout S] [--poll S]
     Start the background worker; it drains the queue and exits when idle.
     --idle-timeout S  Seconds of empty queue before the worker exits (default: 30).
-    --poll S          Queue poll interval in seconds (default: 1).
+    --poll S          Queue poll interval in seconds (default: 0.5).
 
 python skills/offloading-to-local-models/offload_worker.py gate      --project <root> --task FILE
     Evaluate a task JSON file for offload eligibility (prints pass/fail reason).
@@ -36,7 +36,7 @@ python skills/offloading-to-local-models/offload_worker.py status    --project <
 | Setting | Default | Notes |
 |---|---|---|
 | `workhorse_model` | `qwen2.5-coder:14b` | Fits in 16 GB VRAM; primary model for offloaded tasks |
-| `quality_model` | `ornith:35b-q4_K_M` | Spills to RAM, slower; opt-in for higher-quality tasks |
+| `quality_model` | `ornith:35b-q4_K_M` | Spills to RAM, slower; a convenience default value — to use it for a given task, set that job's `model` field to the value of `config["quality_model"]` (e.g. in the task JSON before enqueuing); otherwise `workhorse_model` is used. Not an automatic tier. |
 | `num_ctx` | `32768` | Context window for all requests |
 | `keep_alive` | `30m` | How long Ollama keeps the model loaded between calls |
 | `concurrency` | `1` | 16 GB VRAM comfortably supports up to 2 parallel workers |

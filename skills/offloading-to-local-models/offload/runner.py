@@ -26,6 +26,18 @@ class JobOutcome:
     error: Optional[str]
 
 
+def _safe_dest(project_dir: Path, rel_path: str) -> Path:
+    """
+    Resolve rel_path relative to project_dir and verify it stays inside the tree.
+    Raises ValueError for absolute-escaping or out-of-tree paths (e.g. '../../.env').
+    """
+    root = Path(project_dir).resolve()
+    dest = (root / rel_path).resolve()
+    if dest != root and root not in dest.parents:
+        raise ValueError(f"out-of-tree path rejected: {rel_path!r}")
+    return dest
+
+
 def atomic_write(path: Path, content: str) -> None:
     """Write content to path atomically via a uniquely-named temp file and os.replace."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -124,12 +136,30 @@ def process_job(
             queue.fail(job["id"], error)
             return JobOutcome(contracts.ERROR, False, [], error)
 
+    # --- STEP 0: Validate ALL paths up-front before any snapshot or write ---
+    # If any path escapes the project tree, treat as a job failure (no files written yet).
+    path_error_msg = None
+    try:
+        resolved_dests = [
+            (_safe_dest(project_dir, f["path"]), f)
+            for f in result.envelope["files"]
+        ]
+    except ValueError as exc:
+        path_error_msg = str(exc)
+
+    if path_error_msg is not None:
+        if job["attempts"] < config["max_attempts"]:
+            queue.requeue(job["id"])
+            return JobOutcome(contracts.PENDING, False, [], path_error_msg)
+        else:
+            queue.fail(job["id"], path_error_msg)
+            return JobOutcome(contracts.ERROR, False, [], path_error_msg)
+
     # --- STEP 1: Snapshot ALL target files BEFORE any write ---
     # snapshot: list of (dest_path, original_content_or_None)
     # None means the file was absent before we wrote it
     snapshots = []  # [(Path, str | None)]
-    for f in result.envelope["files"]:
-        dest = project_dir / f["path"]
+    for dest, f in resolved_dests:
         if dest.exists():
             original = dest.read_text(encoding="utf-8")
         else:
@@ -140,8 +170,8 @@ def process_job(
     files_written = []
     passed = False
     try:
-        for f in result.envelope["files"]:
-            atomic_write(project_dir / f["path"], f["content"])
+        for dest, f in resolved_dests:
+            atomic_write(dest, f["content"])
             files_written.append(f["path"])
 
         if verify_command:
