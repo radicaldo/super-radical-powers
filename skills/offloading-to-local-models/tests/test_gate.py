@@ -38,3 +38,19 @@ class TestGate(TmpProjectTestCase):
 
     def test_reason_present(self):
         self.assertTrue(evaluate(sample_task(offload_eligible=False), CFG).reason)
+
+    def test_hint_true_does_not_bypass_verify(self):
+        t = sample_task(offload_eligible=True, verify_command="")
+        self.assertEqual(evaluate(t, CFG).verdict, INELIGIBLE)
+
+    def test_hint_true_does_not_bypass_single_file(self):
+        t = sample_task(offload_eligible=True, target_files=["a.py", "b.py"])
+        self.assertEqual(evaluate(t, CFG).verdict, INELIGIBLE)
+
+    def test_hint_true_does_not_bypass_excluded_category(self):
+        t = sample_task(offload_eligible=True, category="security")
+        self.assertEqual(evaluate(t, CFG).verdict, INELIGIBLE)
+
+    def test_hint_true_does_not_bypass_large_modify(self):
+        t = sample_task(offload_eligible=True, is_modify=True, max_existing_lines=500)
+        self.assertEqual(evaluate(t, CFG).verdict, INELIGIBLE)
