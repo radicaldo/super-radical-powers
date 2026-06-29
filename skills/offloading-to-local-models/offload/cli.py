@@ -67,7 +67,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _cmd_enqueue(args, db_path: Path) -> int:
-    payload = json.loads(Path(args.file).read_text(encoding="utf-8"))
+    file_path = Path(args.file)
+    if not file_path.exists():
+        print(f"error: file not found: {file_path}", file=sys.stderr)
+        return 1
+    payload = json.loads(file_path.read_text(encoding="utf-8"))
     q = JobQueue(db_path)
     try:
         job_id = q.enqueue(payload)
@@ -90,9 +94,14 @@ def _cmd_status(args, db_path: Path) -> int:
 
 
 def _cmd_gate(args, project: Path, config: dict) -> int:
-    task = json.loads(Path(args.task).read_text(encoding="utf-8"))
+    task_path = Path(args.task)
+    if not task_path.exists():
+        print(f"error: file not found: {task_path}", file=sys.stderr)
+        return 1
+    task = json.loads(task_path.read_text(encoding="utf-8"))
 
-    # Compute max_existing_lines from disk for modify targets
+    # Authoritatively derive is_modify and max_existing_lines from disk,
+    # overriding whatever was in the JSON file.
     line_counts = []
     for rel_path in task.get("target_files", []):
         abs_path = project / rel_path
@@ -100,13 +109,8 @@ def _cmd_gate(args, project: Path, config: dict) -> int:
             text = abs_path.read_text(encoding="utf-8", errors="replace")
             line_counts.append(len(text.splitlines()))
 
-    if line_counts:
-        task["max_existing_lines"] = max(line_counts)
-        task["is_modify"] = True
-    else:
-        # Keep whatever is_modify the task already has
-        if "max_existing_lines" not in task:
-            task["max_existing_lines"] = None
+    task["is_modify"] = bool(line_counts)
+    task["max_existing_lines"] = max(line_counts) if line_counts else None
 
     result = gate_mod.evaluate(task, config)
     print(json.dumps({"verdict": result.verdict, "reason": result.reason}))
