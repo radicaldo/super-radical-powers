@@ -3,10 +3,10 @@
 This file is the production template used by `build_prompt()` in `offload/prompt.py`.
 It contains exactly four placeholders that are filled at runtime:
 
-- `{target_path}` — the file(s) to create or modify (comma-separated paths)
-- `{spec}` — the task specification describing what to implement
-- `{acceptance_criteria}` — bullet list of acceptance criteria the output must satisfy
-- `{verify_command}` — shell command that exits 0 when the task is complete
+- `TARGET_PATH` — the file(s) to create or modify (comma-separated paths)
+- `SPEC` — the task specification describing what to implement
+- `ACCEPTANCE_CRITERIA` — bullet list of acceptance criteria the output must satisfy
+- `VERIFY_COMMAND` — shell command that exits 0 when the task is complete
 
 ---
 

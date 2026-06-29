@@ -8,7 +8,11 @@ class TestPrompt(unittest.TestCase):
     def test_system_forbids_diffs(self):
         low = SYSTEM_PROMPT.lower()
         self.assertIn("complete", low)
-        self.assertTrue("diff" in low and "no" in low)
+        self.assertIn("never", low)
+        self.assertIn("diff", low)
+        self.assertIn("patch", low)
+        self.assertIn("elision", low)
+        self.assertIn("fence", low)
 
     def test_build_injects_fields(self):
         t = sample_task(target_files=["src/util.py"],
