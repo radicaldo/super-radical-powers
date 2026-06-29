@@ -39,16 +39,17 @@ class JobQueue:
         cur.execute("BEGIN IMMEDIATE;")
         try:
             row = cur.execute(
-                "SELECT id FROM jobs WHERE status='pending' ORDER BY id LIMIT 1;"
+                "SELECT id FROM jobs WHERE status=? ORDER BY id LIMIT 1;",
+                (contracts.PENDING,),
             ).fetchone()
             if row is None:
                 cur.execute("COMMIT;")
                 return None
             jid = row["id"]
             cur.execute(
-                "UPDATE jobs SET status='running', attempts=attempts+1, updated_at=? "
-                "WHERE id=? AND status='pending';",
-                (_now(), jid),
+                "UPDATE jobs SET status=?, attempts=attempts+1, updated_at=? "
+                "WHERE id=? AND status=?;",
+                (contracts.RUNNING, _now(), jid, contracts.PENDING),
             )
             cur.execute("COMMIT;")
         except Exception:
