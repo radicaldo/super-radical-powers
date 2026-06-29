@@ -1,0 +1,29 @@
+{
+  "_comment": "Default offload config — copy to <project>/.offload/config.json and override any keys you want. Unset keys fall back to these defaults.",
+  "workhorse_model": "qwen2.5-coder:14b",
+  "quality_model": "ornith:35b-q4_K_M",
+  "base_url": "http://localhost:11434",
+  "concurrency": 1,
+  "num_ctx": 32768,
+  "keep_alive": "30m",
+  "timeout_s": 300,
+  "max_attempts": 2,
+  "line_threshold": 150,
+  "allowed_categories": [
+    "boilerplate",
+    "config",
+    "fixture",
+    "format-conversion",
+    "docstring",
+    "test-scaffold",
+    "utility",
+    "regex"
+  ],
+  "excluded_categories": [
+    "security",
+    "algorithmic",
+    "concurrency",
+    "architecture",
+    "migration"
+  ]
+}
