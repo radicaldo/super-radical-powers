@@ -14,8 +14,10 @@ All subcommands accept `--project <root>` (defaults to the current directory).
 python skills/offloading-to-local-models/offload_worker.py health    --project <root>
     Check that Ollama is reachable and the configured model is loaded.
 
-python skills/offloading-to-local-models/offload_worker.py run       --project <root> --concurrency N
+python skills/offloading-to-local-models/offload_worker.py run       --project <root> --concurrency N [--idle-timeout S] [--poll S]
     Start the background worker; it drains the queue and exits when idle.
+    --idle-timeout S  Seconds of empty queue before the worker exits (default: 30).
+    --poll S          Queue poll interval in seconds (default: 1).
 
 python skills/offloading-to-local-models/offload_worker.py gate      --project <root> --task FILE
     Evaluate a task JSON file for offload eligibility (prints pass/fail reason).
@@ -54,13 +56,9 @@ The full default config is in `config.example.json`. To override settings, copy 
 
 ## IMPORTANT — Making the Skill Active (Plugin-Update Caveat)
 
-The **active plugin** running in your Claude Code session is loaded from the marketplace cache (currently version **5.4.0**). This fork's source repo is a newer version (**5.5.x**). A skill added to the source repo is **not automatically active** in running Claude Code sessions — the plugin must be updated/reinstalled from the fork and the version bumped (see `.version-bump.json`, which drives updates to `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and `package.json`).
+**Making it live in Claude Code.** Claude Code loads installed plugins from a local marketplace cache, which can lag behind this source tree. A skill newly added to the source repo is **not** automatically active in a running Claude Code session until the plugin is updated/reinstalled from the fork (and a version bump is published — see `.version-bump.json`, which bumps `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and `package.json` together). Until then, this skill is fully usable directly via the CLI (`python skills/offloading-to-local-models/offload_worker.py ...`) but will not be auto-discovered by the running plugin.
 
-Until the plugin is updated, this skill:
-- Works **directly via the CLI**: `python skills/offloading-to-local-models/offload_worker.py ...`
-- Is **not** auto-discovered or invocable by name inside Claude Code sessions
-
-Do not assume the skill is live just because it exists in the source tree. Check the active plugin version first.
+Do not assume the skill is live just because it exists in the source tree. Reinstall the plugin from the fork and verify the active version matches the source before expecting the skill to be auto-discovered.
 
 ---
 

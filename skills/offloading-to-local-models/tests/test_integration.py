@@ -43,6 +43,12 @@ class TestEndToEndIntegration(TmpProjectTestCase):
         return JobQueue(db_path), db_path
 
     def _enqueue_job(self, q, target_path, verify_ok=True):
+        # target_path must be included in "target_files" so that build_prompt
+        # embeds it via the template's {target_path} placeholder.  The injected
+        # `gen` function below routes to GOOD_CONTENT or BAD_CONTENT by
+        # searching for the path in the rendered prompt text — if target_path
+        # were absent from "target_files", the routing re.search would miss it
+        # and every job would fall through to the BAD_CONTENT branch.
         vc = (
             'python -c "import sys;sys.exit(0)"'
             if verify_ok
@@ -65,8 +71,11 @@ class TestEndToEndIntegration(TmpProjectTestCase):
         jid_good = self._enqueue_job(q, "src/good.py", verify_ok=True)
         jid_bad  = self._enqueue_job(q, "src/bad.py",  verify_ok=False)
 
-        # Injected generator: inspect prompt to determine which file is targeted
-        # (build_prompt embeds the target path in the prompt text).
+        # Injected generator: inspect prompt to determine which file is targeted.
+        # Routing relies on the target path appearing in the rendered prompt via
+        # the template's {target_path} placeholder.  "target_files" in the job
+        # payload must contain the routable path for build_prompt to embed it;
+        # see _enqueue_job above for why this matters.
         def gen(**kw):
             prompt_text = kw.get("prompt", "")
             m = re.search(r"src/(good|bad)\.py", prompt_text)
